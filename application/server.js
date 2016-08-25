@@ -5,23 +5,23 @@ This application demonstrates a service which returns previously inserted data f
 
 'use strict';
 
-let static = require('node-static');
+let nodeStatic = require('node-static');
 
 const config = require('./configuration');
 
-let fileServer = new static.Server(config.PATH, {});
+let fileServer = new nodeStatic.Server(config.PATH, {});
 
 require('http').createServer(function (request, response) {
-    request.addListener('end', function () {
-        fileServer.serve(request, response, function (err, result) {
-            if (err) { // There was an error serving the file
-                console.error("Error serving " + request.url + " - " + err.message);
+  request.addListener('end', function () {
+    fileServer.serve(request, response, function (err, result) {
+      if (err) { // There was an error serving the file
+        console.error('Error serving ' + request.url + ' - ' + err.message);
 
-                // Respond to the client
-                response.writeHead(err.status, err.headers);
-                response.end();
-            }
-            console.log(result);
-        });
-    }).resume();
+        // Respond to the client
+        response.writeHead(err.status, err.headers);
+        response.end();
+      }
+      console.log(result);
+    });
+  }).resume();
 }).listen(config.PORT);
