@@ -13,8 +13,6 @@ cache:
 before_install:
 - if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/install_compose.sh ; fi
 - cd application
-before_script:
-- npm run start:mongodb
 script:
 - sleep 15
 - npm run lint
@@ -28,7 +26,6 @@ after_success:
 - cd application
 after_script:
 - npm run coverall
-- npm run stop:mongodb
 - rm -f deployment_keys.tar
 - rm -f ~/.docker/{cert.pem,key.pem,ca.pem,config.json}
 services:
@@ -42,7 +39,6 @@ notifications:
 env:
   global:
   - DOCKER_COMPOSE_VERSION=1.6.2
-  - DATABASE_PORT=27018
   - secure: YfdAz3IEFOI0LacKaJh95yHW6uOfWjh6CHFyTJ3/3oo8jJuq2jwI2M1+W+AbwzzR/NC0ppiimIkjREl9FUUw3YcHZRexxNcx3qGQQtTGmMDL2TdLESciPG2fvEdxK2uJzOItMEOQXJoaSDApWzjyCAwAELKKWcvptSLAtFxfUjvDgA9nrwtlUXSKt3b2bgqTpPhpcX2px1lWgZCeO2ggUqTentSGuMFYHbQ4k1M47eY9Hk3hWHDJZ6vNJrlLUvCA9nqjaQH8F5IqTbjFVwwYCfDYXRR3RFlUr0EoMDpu7D1n6KgMN/2KhlSLz+E7pvRY74z188qHmrRWFc0QPteBndqJvz2y8Uc4vYa4Z/9o+pQf7Uur4/3xqGCtkd/reuAZSK0fja8PZm5zPsVMb/v3xEZbpWX+f2+cGVyBiIUowWkyd0I+J8M62v/pPYfCz9q6Ok+umexANzVOPlMGa75PEdsiTZgPaYO8Q85VD43szR743N8xTRVZtCXudyvYoxxyhIZmww91WgsD4cFoW7qp14aV9JwZk1PtJYIs1VfzG7fFLk5YxvLld/eFQZRSqwoJ91QuikzaxM05ECoB9zwzsMR23oXZP+0xpYN4zWzaVDGoMVfbNfAPQIJOsgjTNsLFdCiuxAF4KU+l3UiBpHnTLQhIf5RErjQpCGYWt/Dpim4=
   - secure: Dskfl/ouQzHG84j6/6YvUlvK+5d2CHczB/kCDfeBbUKVRS9lsu1iuZD7LhRB+rFd2+wDF9vCoAbUMoasqLYOvuSrFUK6FYx1WZsOTMBc6QyKpu5jsyzHFVul5EzSgMzx8KPeiylJxWLy5/7CwYEJcfKcAnUcFhRpkpHJA+EJkHKeXESTzOraUMXmPwWhWgoIbP/RVloDFGzlRffnt6ieSSPqRMCFvoDoU3RUftj1l8ywOukJ4Cb5FLpZ0QM7E8WbCISjyRA23+90ek3bhQdoNbrMXXlCcVeJbns3lzPggzdtGLIgQdXG4boQDfUt33R80BPSvMLqED8DniFSu6Rz0LN503w4x0M/sOOV0RQyiSoh6Wdk4N2kyRI8hDDa2+NrvYBRp+n7AIel3il8QkH/y4Md2RluJa12L4Ghdko5M1oCb93nXUAO4sAh4lzNu7922weNG2GAuTNGb9gAa3073JvHFF5dbQTlSLlmDAGE4+aUnfidHZiLaHENZrnQg7Bj71eGX9cC8g3F+XGNF6TlYK87qog6/Qn8jP3TI2pSw5IDply9lXJujBB3mJIGpTjxLxLlEgXogm+xXstlqX8K+J/nic+RUHkH0Pmr6HDDmW1soDInZuZKDofOmRLBYS8ko9RTYswKi64WpDlIAZTABgThVj9OiNql2DVLCGEbPvk=
   - secure: vXIolFkQbUajaNo4Cj07ixRWoYV8RnpTS3WocLFa6vcoiCxmUpTsMvfUNRzpWI66oJ7DDlsy7VCISFOOgl68/YLRDaqV5LutKiafjo9uoRcLNJAMnt3reX0oS08Hdu0xCH1vqUXRerh4F12mA/3p7v14S9pH7CBocFr57mjgiHfq2itmsFHxB7Eny59I8u/7kk1uLKrkqhdK1SX/W0aapPiwmotUkOYxepnqk9d3SE2mF/ZVw9RuVS7P6HQ7xEVGcXu9+IvcEVPQwyAILrN4FNYUWr/t4KSbFIpVFfjf9943Rm87qvRWWt/lVVvbF6E0a9Ok8Mw/NbwSAfTo8iA0E6YzQtJjiK+/b/Ku50RMKEhP1BRamvp/t1seKOfJ0aPIarzCiW1WJMbZlC80QUI9E2ynta4meN0G8Yfc1+v6rIrd5zpkPi6n3g0HXoypd60j5s4QjC2vHeaACxOoeG/HyiXTff9Hjbh+0wu0dz4tT7014zcy4IXaAUuBwWwRAmE7XmrVtqWHpn5bWfZ9tW03HQa21KCWXnrtQIFTyWq/+nA3z8UG3k0ABrJTeb6P+fYiUcy3+j87HWn+VSEKsqAevKO6dAJdd/7jfT2yVxJig9BOhR97nOVAsS9hWcFsvW80m5uUyiITpEaWEdiDS1lyhXIQptdsD/3bVLf0Z+absbk=

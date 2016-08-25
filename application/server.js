@@ -5,68 +5,23 @@ This application demonstrates a service which returns previously inserted data f
 
 'use strict';
 
-//This is our webserver framework (instead of express)
-const hapi = require('hapi'),
-  co = require('./common');
+let static = require('node-static');
 
-//Initiate the webserver with standard or given port
-const server = new hapi.Server({ connections: {routes: {validate: { options: {convert : false}}}}});
+const config = require('./configuration');
 
-let port = (!co.isEmpty(process.env.APPLICATION_PORT)) ? process.env.APPLICATION_PORT : 3000;
-server.connection({
-  port: port
-});
-let host = (!co.isEmpty(process.env.VIRTUAL_HOST)) ? process.env.VIRTUAL_HOST : server.info.host;
+let fileServer = new static.Server(config.PATH, {});
 
-//Export the webserver to be able to use server.log()
-module.exports = server;
+require('http').createServer(function (request, response) {
+    request.addListener('end', function () {
+        fileServer.serve(request, response, function (err, result) {
+            if (err) { // There was an error serving the file
+                console.error("Error serving " + request.url + " - " + err.message);
 
-//Plugin for sweet server console output
-let plugins = [
-  require('inert'),
-  require('vision'), {
-    register: require('good'),
-    options: {
-      ops: {
-        interval: 1000
-      },
-      reporters: {
-        console: [{
-          module: 'good-squeeze',
-          name: 'Squeeze',
-          args: [{
-            log: '*',
-            response: '*',
-            request: '*'
-          }]
-        }, {
-          module: 'good-console'
-        }, 'stdout']
-      }
-    }
-  }, { //Plugin for swagger API documentation
-    register: require('hapi-swagger'),
-    options: {
-      host: host,
-      info: {
-        title: 'Example API',
-        description: 'Powered by node, hapi, joi, hapi-swaggered, hapi-swaggered-ui and swagger-ui',
-        version: '0.1.0'
-      }
-    }
-  }
-];
-
-//Register plugins and start webserver
-server.register(plugins, (err) => {
-  if (err) {
-    console.error(err);
-    global.process.exit();
-  } else {
-    server.start(() => {
-      server.log('info', 'Server started at ' + server.info.uri);
-      //Register routes
-      require('./routes.js')(server);
-    });
-  }
-});
+                // Respond to the client
+                response.writeHead(err.status, err.headers);
+                response.end();
+            }
+            console.log(result);
+        });
+    }).resume();
+}).listen(config.PORT);
