@@ -1,5 +1,6 @@
-template:
-  image: slidewiki/fileservice
+fileservice:
+#  image: slidewiki/fileservice
+  build: ./
   restart: on-failure:5
   expose:
     - "80"
@@ -7,3 +8,5 @@ template:
     - APPLICATION_PORT=8080
     - APPLICATION_PATH=/data/files
     - VIRTUAL_HOST=fileservice.manfredfris.ch
+  volumes:
+    - /data/files:/data/files
