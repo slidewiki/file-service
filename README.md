@@ -26,7 +26,7 @@ Also the import-service have to ensure that filenames are distinct.
 **Based on [docker-compose docs](https://docs.docker.com/engine/tutorials/dockervolumes/#/creating-and-mounting-a-data-volume-container)**
 
 We will have a container which just contains one volume (which will be shared):
-`docker create -v /data/files --name volume_share training/postgres /bin/true`
+`docker create -v /data/files:/data/files --name volume_share training/postgres /bin/true`
 
 Now the other containers (like file-service and import-service) are linked to the volume of the "volume_share" container.
 In order to do this adopt the lines in [docker-compose.yml](https://github.com/slidewiki/file-service/blob/master/docker-compose.yml).
