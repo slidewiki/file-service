@@ -1,6 +1,6 @@
 fileservice:
-#  image: slidewiki/fileservice
-  build: ./
+  image: slidewiki/fileservice
+#build: ./
   restart: on-failure:5
   expose:
     - "80"
