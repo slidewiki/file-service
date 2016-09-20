@@ -6,7 +6,7 @@ let port = 8080;
 if (!co.isEmpty(process.env.DATABASE_PORT)){
   port = process.env.DATABASE_PORT;
 }
-let path = '/home/kjunghanns/Pictures';
+let path = '/data/files';
 if (!co.isEmpty(process.env.APPLICATION_PATH)){
   path = process.env.APPLICATION_PATH;
 }
