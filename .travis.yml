@@ -11,16 +11,20 @@ cache:
   directories:
   - "./application/node_modules"
 before_install:
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/install_compose.sh ; fi
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
+  ./travis_scripts/install_compose.sh ; fi
 - cd application
 script:
 - sleep 15
 - npm run lint
 after_success:
 - cd ..
-- openssl aes-256-cbc -K $encrypted_9e8bcb5f7516_key -iv $encrypted_9e8bcb5f7516_iv -in deployment_keys.tar.enc -out deployment_keys.tar -d
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/dockerhub.sh ; fi
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/deploy.sh ; fi
+- openssl aes-256-cbc -K $encrypted_9e8bcb5f7516_key -iv $encrypted_9e8bcb5f7516_iv
+  -in deployment_keys.tar.enc -out deployment_keys.tar -d
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
+  ./travis_scripts/dockerhub.sh ; fi
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
+  ./travis_scripts/deploy.sh ; fi
 - cd application
 after_script:
 - npm run coverall
@@ -33,10 +37,10 @@ notifications:
     on_success: change
     on_failure: always
     rooms:
-      secure: qPAjYvVfyiiEYSrP4JnV/vSVRTGvETFdTGBb/TuLVynk84sOoH048udo1johLFCUALsmK7n11Nh9y2ehHo+jexH7UCzGHb4g7CJCNCa/EOIygMTbsntyspB2tCMAQbgf/hUMjGQrjqrysrvu21THhms2lRZ+fKFwmpI0xd+6MsSRVLjF95xl7gVC8ikIkUck27ZxcEOYhf3RK/tnPdbHjPu+dWSPkH7zVwLq3SvypRn7fwK9TDEo8VvXCNOF+6MX9KquCi251+0ZNTHKkiGkyqoz07tWPmaXuvf6v22XKZO8zWcDkA6qVtYheXkMYPl8cl0YAs5U7PwQz+mZhKQDbMoltj/NosKiKAtZk4Fg7ALweZE4wcIggfAhSe052ImgI06vtb1O6hVzGVxynT1vVISrPUymh2yNI/pJ1P/eHtFWg5TO+rxNHJSQYTWWRLxjEvgolDSpdOikDLRt/GrE7qkvqv0ONNPrxf2/bZBQaT27ALN/CWz5KiGAGSq8dilwiIBjUBRJCDgnmZQsa2p3kFUti7+TjMB0NhSpNc6ht8zje7lL5DSUMx6VgbOoVK3cK4zpKsiLfOgnWU0AKQWohaNCDoNe3JxZl+pINUy4sSDq/dDaDOC4wSn3p4zKD/ryJoftkzEHTQFy9HC8epgU1s3xXFCN3d9u2KblWnCCiCc=
+      secure: eJc/TFffQcueXzIugUsuGwwquzlmPOMD7zGD1C0m7lbPVxxiItIVCsS77Pylf0B5yLaZkiwyZEoYFyFc0CFWiB0crAUslDP53ZQN6ytu0BYiJffHo2W1nvWg7rSq8LvlKBCH2ZLhT7J2lrTk9JICS6+z8HuLPSNH94cwr1aHt6ElxrBLFKnyVdNxcNBpBKM09diGCkNGK0dFNiODZY69umDASSv4HWt+Zw3OQXfbVFCKe3xfrOA/kJr+rrqdSCo3ze6Jcl8l87WIL5b1FwwIM6E+7e8lut6cZyXyNRK+a8RfhAzQD9vYyvupJNfb9aUoC2D24cnIJtWN7x6s9NOLMO8SY1AlO5uBckXzxiMn4oeCZ5bL15twLLvQ6nkDuRYJPc/JDDiSx4AbpSUOvOt8ZUQbMnkcCM1KM+PURRpIoREpiW3gn0N667Gi+dhUg6O7EgFfotWbvYhkbqJpiF592zd8Uubk8FSnuI5KHhTts4hL8szwtnUnf5PtHe+RDfTsac5eGhuaNAgj2zx7G3wR3g86yfZPi+vnylHeNiU3q4sVmscgGwaUyo9QW2Zv0c492zK/pkZg0aIsLcppglasdrYnNyVz499jrOmOrsvwHUP8f0+/9hciISxHY8E4cYVgniCDnloM3IirxJj7F8gULqZQEtb/BUReL1zPbuAD0eo=
 env:
   global:
   - DOCKER_COMPOSE_VERSION=1.6.2
   - secure: ALawyCVulz0Hy0DADAw4z3Ab+ydHvw4tYoyYoN+zz1cMrjWKWzDuIvCq0jqmHICgq6o9kPJWfyUPbXzxDON8vJj37OHbZyh0LnNU0glmnZE6Zo1cql6GEZ1WoOYGZp9p3rlKSAFVS1mCxWA9YYUPReEb/cRowgVJT2oVwPlblv6b1znxqzBMltf1M2IuLYFDPbgNRPTJJliDu6KLmp2/pHftjCcR7zm12ea1fkphe1hfQgByq3riIYLTDE5Xzl5QAIRrQqxEZzwn5E0g3LYsql20jjbRUAXZ1chUuXl4q6u9f9L/IX4XLduIrAcjORapFio3J0poKueTKKmVRxmnTTz0v/6xUD72vI1omPp2I/blkSoyClSjLtrhSXmVthAoe7ixQ43IsYHS/+A1Z6nWcgY8OCQRCBzmRyOJWYs/awzL9vvGsdkhGRLvcDp3mih/GFSLuMOPuRoXf/4A0j7rD7NpkpWDqVbow65SM1HPf0HMuSdUu+ciFTeAGylkEDrUYAwyttVcyPD/Tq+3tSzFLco/INFx7OLA8ztbZLu+3m/kCOhoiqu0PXqYNNcS+h4ZXGqs+NRYAbYulb7IWLwews78pJY0xzu3dhfvBVTuXLOrmP2WZ0t9LAhP7iHZZbBx00Or/L5uenDMqU09V9Abs3Bxx3ozm9SruBoWk78BeUo=
   - secure: P+YE1i7GMtNKBWHKGI1Cv6DMpl3dBy6FOx/Sf/FPxowPLrkoKLeye9lJsi0Uu83UpSYXNJjkMrDi7oIgVuezTCw9ZMvQ746aNK82cv8epMaKjhdmfCcjKsHwNALHL8wnMZPBb4W6ExJqVTq0tsPUU4XqjySrnavu+MfAjhrYva8yGhL8Y7nh27FUoGyLVy4y1zbNCHJkfQAQrysSqlI/TjKwxtGcQIzspkY7sXhYWtYrl26JMVfZ5nbQU1mlRwuBKmMJK5u/LPizSLPOhXOaEAu3L8N5ybKa7pFCiV0YogLD1Ned+181LmIM3VYPPiIYqAoxfWrRBJOyjQdVSbl78dn8CS3Nuo7wHttuF+/+2FkyCyM+nk/4hZe0B37ULBpyLSQyHq3iGc6+nKenvS1AxeDy3NzK8tw/anmflJsUhyxFlQcUsmWYA9dsDRIZ8Kd0BCVv6frZPrZVYZ5GZX0kvDpTFlK2kP2/POR/2TrlXZCP3evPGNEvz7QhSsuL1EL9Uog5/RrdcIUoITZAvnSPauO1m6HtAKeFG77VqcUFuxs7ZkBAd1sMjXM+wDj68ywSNul1qssI0Y3rgKbZf6KRnvWcC7NVyfjOnKvQXb3/QiJw6Oqm5CginkW4eH3EYH30fBfBvS9iYgNKhE1q20PJ8y4I/jLqG2Nd3dc5NN7rXK8=
-  - secure: yHxJ/Vtw6ZuVlk9RVN7i5hgfi+tWT8pRoprevB8tqt9LXdMTB0Mk54OZs/We0FtqebJmxYZt/gGuCcLtw0S3IJOUafJioNA78t+9TZYZL1bTw3eJEuvtLEcqPDOQjGsS5lz1vAv24OjopAKsTZlc+PwfZdKz23inshL3o6mROolwfu9jJ0rk56+853dHcU00SztPdxka0/2vCjyiBTGzl10pQTE6Lv8q+jgAaKp9DPFgWnfFCJbYI70TDmy8O7WScJ1OzDxACDQcvIKO2y54zAONpTUwDKcwYqoeAFl/0iYpIti9dOThwDhLRyEdfK8n5Iw5NSdLEr6ErCarsi/ie9+3GqGJKtgMB6rIV37umLkjYCt8gSOZNGUtpe343rANElzoxzMb9OXVYDqhNOVlgXyPW8MB0fXrNSwHHfLGQuvnUmxRMTR8m8AjyZjxXTua0QOV3c3ZDcUixTMOW+bKn68wfHz1BVF+G9rmGrLY7WfFSFTu/gx1XR7ny0d+szGySBkIkKp8OZ/OMNSQ/9sN+GZzBfzNQcVkxCayli7z2VUR5jq+p6dtkjb82ofGqUuB64NQjSyyG+l2j6n9z1Pa6/rV7OD/BG9IeNX+y2qKVlNKa6D8hCS6huQQ/JyyU+fjK3dBVou54kJ2OTEQIMhzzU5y5w0ETt/4kFLqM6GUPUY= 
+  - secure: yHxJ/Vtw6ZuVlk9RVN7i5hgfi+tWT8pRoprevB8tqt9LXdMTB0Mk54OZs/We0FtqebJmxYZt/gGuCcLtw0S3IJOUafJioNA78t+9TZYZL1bTw3eJEuvtLEcqPDOQjGsS5lz1vAv24OjopAKsTZlc+PwfZdKz23inshL3o6mROolwfu9jJ0rk56+853dHcU00SztPdxka0/2vCjyiBTGzl10pQTE6Lv8q+jgAaKp9DPFgWnfFCJbYI70TDmy8O7WScJ1OzDxACDQcvIKO2y54zAONpTUwDKcwYqoeAFl/0iYpIti9dOThwDhLRyEdfK8n5Iw5NSdLEr6ErCarsi/ie9+3GqGJKtgMB6rIV37umLkjYCt8gSOZNGUtpe343rANElzoxzMb9OXVYDqhNOVlgXyPW8MB0fXrNSwHHfLGQuvnUmxRMTR8m8AjyZjxXTua0QOV3c3ZDcUixTMOW+bKn68wfHz1BVF+G9rmGrLY7WfFSFTu/gx1XR7ny0d+szGySBkIkKp8OZ/OMNSQ/9sN+GZzBfzNQcVkxCayli7z2VUR5jq+p6dtkjb82ofGqUuB64NQjSyyG+l2j6n9z1Pa6/rV7OD/BG9IeNX+y2qKVlNKa6D8hCS6huQQ/JyyU+fjK3dBVou54kJ2OTEQIMhzzU5y5w0ETt/4kFLqM6GUPUY=
