@@ -18,6 +18,7 @@ ADD ./application/ ./
 # ----------------- #
 
 EXPOSE 80
+VOLUME /data/files
 
 # ----------- #
 #   Cleanup   #
