@@ -11,22 +11,16 @@ cache:
   directories:
   - "./application/node_modules"
 before_install:
-- openssl aes-256-cbc -K $encrypted_b505b495451a_key -iv $encrypted_b505b495451a_iv
-  -in deployment_keys.tar.enc -out deployment_keys.tar -d
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
-  ./travis_scripts/install_compose.sh ; fi
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/install_compose.sh ; fi
 - cd application
 script:
 - sleep 15
 - npm run lint
 after_success:
 - cd ..
-- openssl aes-256-cbc -K $encrypted_9e8bcb5f7516_key -iv $encrypted_9e8bcb5f7516_iv
-  -in deployment_keys.tar.enc -out deployment_keys.tar -d
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
-  ./travis_scripts/dockerhub.sh ; fi
-- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then
-  ./travis_scripts/deploy.sh ; fi
+- openssl aes-256-cbc -K $encrypted_b505b495451a_key -iv $encrypted_b505b495451a_iv -in deployment_keys.tar.enc -out deployment_keys.tar -d
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/dockerhub.sh ; fi
+- if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/deploy.sh ; fi
 - cd application
 after_script:
 - npm run coverall
