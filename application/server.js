@@ -15,8 +15,9 @@ require('http').createServer(function (request, response) {
         // Respond to the client
         response.writeHead(err.status, err.headers);
         response.end();
+      } else {
+        console.log(result.message + ' ' + request.url);
       }
-      console.log(result.message + ' ' + request.url);
     });
   }).resume();
 }).listen(config.PORT);
