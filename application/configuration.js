@@ -1,17 +1,35 @@
 /* This module is used for confugrating the mongodb connection*/
 'use strict';
 
-const co = require('./common');
-let port = 8080;
-if (!co.isEmpty(process.env.APPLICATION_PORT)){
-  port = process.env.APPLICATION_PORT;
+//read mongodb URL from /etc/hosts
+let host = 'localhost';
+const fs = require('fs');
+try {
+  const lines = fs.readFileSync('/etc/hosts').toString().split('\n');
+  for (let i in lines) {
+    if (lines[i].includes('mongodb')) {
+      const entrys = lines[i].split(' ');
+      host = entrys[entrys.length - 1];
+      console.log('Found mongodb host. Using ' + host + ' as database host.');
+    }
+  }
+} catch (e) {
+  //Windows or no read rights (bad)
 }
-let path = '/data/files';
-if (!co.isEmpty(process.env.APPLICATION_PATH)){
-  path = process.env.APPLICATION_PATH;
+
+//read mongo port from ENV
+const co = require('./common');
+let port = 27017;
+if (!co.isEmpty(process.env.DATABASE_PORT)){
+  port = process.env.DATABASE_PORT;
+  //console.log('Using port ' + port + ' as database port.'); TODO replace it with logging, that isn't printed at npm run test:unit
 }
 
 module.exports = {
-  PORT: port,
-  PATH: path
+  MongoDB: {
+    PORT: port,
+    HOST: host,
+    NS: 'local',
+    SLIDEWIKIDATABASE: 'slidewiki'
+  }
 };

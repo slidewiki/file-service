@@ -13,6 +13,13 @@ cache:
 before_install:
 - if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" = "false" ] ; then ./travis_scripts/install_compose.sh ; fi
 - cd application
+before_script:
+- npm run start:mongodb
+script:
+- sleep 15
+- npm run lint
+- npm run test:unit
+- npm run test:integration
 script:
 - sleep 15
 - npm run lint
@@ -24,6 +31,7 @@ after_success:
 - cd application
 after_script:
 - npm run coverall
+- npm run stop:mongodb
 - rm -f deployment_keys.tar
 - rm -f ~/.docker/{cert.pem,key.pem,ca.pem,config.json}
 services:
