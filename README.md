@@ -7,6 +7,10 @@
 [![LinesOfCode](https://img.shields.io/badge/LOC-0-lightgrey.svg)](https://github.com/slidewiki/file-service/blob/master/application/package.json)
 [![Coverage Status](https://coveralls.io/repos/github/slidewiki/file-service/badge.svg?branch=master)](https://coveralls.io/github/slidewiki/file-service?branch=master)
 
+Linux Dependencies:
+- imagemagick
+- sha256
+
 ### Service ###
 This service just serves files from a given path (APPLICATION_PATH) by their names.
 It will be deployed under fileservice.manfredfris.ch

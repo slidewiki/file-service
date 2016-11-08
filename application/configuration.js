@@ -1,7 +1,5 @@
-/* This module is used for confugrating the mongodb connection*/
 'use strict';
 
-//read mongodb URL from /etc/hosts
 let host = 'localhost';
 const fs = require('fs');
 try {
@@ -22,7 +20,11 @@ const co = require('./common');
 let port = 27017;
 if (!co.isEmpty(process.env.DATABASE_PORT)){
   port = process.env.DATABASE_PORT;
-  //console.log('Using port ' + port + ' as database port.'); TODO replace it with logging, that isn't printed at npm run test:unit
+}
+
+let fsPath = '/data/files';
+if (!co.isEmpty(process.env.APPLICATION_PATH)){
+  fsPath = process.env.APPLICATION_PATH;
 }
 
 module.exports = {
@@ -31,5 +33,6 @@ module.exports = {
     HOST: host,
     NS: 'local',
     SLIDEWIKIDATABASE: 'slidewiki'
-  }
+  },
+  fsPath
 };

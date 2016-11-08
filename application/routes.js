@@ -1,75 +1,55 @@
-/*
-These are routes as defined in https://docs.google.com/document/d/1337m6i7Y0GPULKLsKpyHR4NRzRwhoxJnAZNnDFCigkc/edit#
-Each route implementes a basic parameter/payload validation and a swagger API documentation description
-*/
 'use strict';
 
 const Joi = require('joi'),
-  handlers = require('./controllers/handler');
+  handlers = require('./controllers/handler'),
+  conf = require('./configuration');
 
 module.exports = function(server) {
-  //Get slide with id id from database and return it (when not available, return NOT FOUND). Validate id
   server.route({
     method: 'GET',
-    path: '/slide/{id}',
-    handler: handlers.getSlide,
+    path: '/file/{filename*}',
+    handler: {
+      directory: {
+        path: conf.fsPath
+      }
+    },
     config: {
       validate: {
         params: {
-          id: Joi.string().alphanum().lowercase()
+          filename: Joi.string().trim().uri({allowRelative: true}).required()
         },
       },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['image/jpeg','image/png'],
+        }
+      },
       tags: ['api'],
-      description: 'Get a slide'
+      description: 'Get a file'
     }
   });
 
-  //Create new slide (by payload) and return it (...). Validate payload
   server.route({
     method: 'POST',
-    path: '/slide/new',
-    handler: handlers.newSlide,
+    path: '/file',
+    handler: handlers.storeFile,
     config: {
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 10485760, //10MB
+        failAction: 'log'
+      },
       validate: {
-        payload: Joi.object().keys({
-          title: Joi.string(),
-          body: Joi.string(),
-          user_id: Joi.string().alphanum().lowercase(),
-          root_deck_id: Joi.string().alphanum().lowercase(),
-          parent_deck_id: Joi.string().alphanum().lowercase(),
-          no_new_revision: Joi.boolean(),
-          position: Joi.number().integer().min(0),
-          language: Joi.string()
-        }).requiredKeys('title', 'body'),
+        payload: Joi.required()
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['image/jpeg','image/png'],
+        }
       },
       tags: ['api'],
-      description: 'Create a new slide'
-    }
-  });
-
-  //Update slide with id id (by payload) and return it (...). Validate payload
-  server.route({
-    method: 'PUT',
-    path: '/slide/{id}',
-    handler: handlers.replaceSlide,
-    config: {
-      validate: {
-        params: {
-          id: Joi.string().alphanum().lowercase()
-        },
-        payload: Joi.object().keys({
-          title: Joi.string(),
-          body: Joi.string(),
-          user_id: Joi.string().alphanum().lowercase(),
-          root_deck_id: Joi.string().alphanum().lowercase(),
-          parent_deck_id: Joi.string().alphanum().lowercase(),
-          no_new_revision: Joi.boolean(),
-          position: Joi.number().integer().min(0),
-          language: Joi.string()
-        }).requiredKeys('title', 'body'),
-      },
-      tags: ['api'],
-      description: 'Replace a slide'
-    }
+      description: 'Store a file'
+    },
   });
 };

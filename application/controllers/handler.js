@@ -1,50 +1,31 @@
-/*
-Handles the requests by executing stuff and replying to the client. Uses promises to get stuff done.
-*/
-
 'use strict';
 
-const boom = require('boom'), //Boom gives us some predefined http codes and proper responses
-  slideDB = require('../database/slideDatabase'), //Database functions specific for slides
-  co = require('../common');
+const boom = require('boom'),
+  co = require('../common'),
+  child = require('child_process');
 
 module.exports = {
-  //Get slide from database or return NOT FOUND
-  getSlide: function(request, reply) {
-    slideDB.get(encodeURIComponent(request.params.id)).then((slide) => {
-      if (co.isEmpty(slide))
-        reply(boom.notFound());
-      else
-        reply(co.rewriteID(slide));
-    }).catch((error) => {
-      request.log('error', error);
-      reply(boom.badImplementation());
-    });
-  },
-
-  //Create Slide with new id and payload or return INTERNAL_SERVER_ERROR
-  newSlide: function(request, reply) {
-    slideDB.insert(request.payload).then((inserted) => {
-      if (co.isEmpty(inserted.ops[0]))
-        throw inserted;
-      else
-        reply(co.rewriteID(inserted.ops[0]));
-    }).catch((error) => {
-      request.log('error', error);
-      reply(boom.badImplementation());
-    });
-  },
-
-  //Update Slide with id id and payload or return INTERNAL_SERVER_ERROR
-  replaceSlide: function(request, reply) {
-    slideDB.replace(encodeURIComponent(request.params.id), request.payload).then((replaced) => {
-      if (co.isEmpty(replaced.value))
-        throw replaced;
-      else
-        reply(replaced.value);
-    }).catch((error) => {
-      request.log('error', error);
-      reply(boom.badImplementation());
-    });
-  },
+  storeFile: function(request, reply) {
+    if(request.payload.bytes <= 1){
+      child.execSync('rm -f '+ request.payload.path);
+      reply(boom.badRequest('A payload is required'));
+    } else {
+      try{
+        let sum = child.execSync('sha256sum '+ request.payload.path).toString().split(' ')[0];
+        let hasAlpha = child.execSync('identify -format "%[channels]" ' + request.payload.path).toString().includes('a');
+        if(hasAlpha){
+          child.execSync('convert '+ request.payload.path +' -resize 360 -quality 95 /tmp/'+sum+'_thumbnail.png');
+          child.execSync('convert '+ request.payload.path +' -resize 1920 -quality 95 /tmp/'+sum+'.png');
+        } else {
+          child.execSync('convert '+ request.payload.path +' -resize 360 -quality 95 /tmp/'+sum+'_thumbnail.jpg');
+          child.execSync('convert '+ request.payload.path +' -resize 1920 -quality 95 /tmp/'+sum+'.jpg');
+        }
+        child.execSync('rm -f '+ request.payload.path);
+        reply({filename: sum+(hasAlpha ? '.png': '.jpg'),
+          thumbnail: sum+'_thumbnail'+(hasAlpha ? '.png': '.jpg')});
+      } catch (err) {
+        reply(boom.badImplementation);
+      }
+    }
+  }
 };
