@@ -37,7 +37,7 @@
     "joi": "^9.0.4",
     "vision": "^4.1.0",
     "node-static": "^0.7.8",
-    "mongodb": "^2.2.8",
+    "mongodb": "^2.2.8"
   },
   "engines": {
     "node": ">=6.0.0"
