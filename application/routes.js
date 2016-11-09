@@ -7,21 +7,32 @@ const Joi = require('joi'),
 module.exports = function(server) {
   server.route({
     method: 'GET',
-    path: '/file/{filename*}',
+    path: '/picture/{filename*}',
     handler: {
       directory: {
-        path: conf.fsPath
+        path: conf.fsPath + 'pictures/'
       }
     },
     config: {
+      auth: false,
       validate: {
         params: {
-          filename: Joi.string().trim().uri({allowRelative: true}).required()
+          filename: Joi.string()
+            .trim()
+            .required()
         },
       },
       plugins: {
         'hapi-swagger': {
-          produces: ['image/jpeg','image/png'],
+          produces: ['image/jpeg', 'image/png'],
+          responses: {
+            ' 404 ': {
+              'description': 'Not picture was found'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
         }
       },
       tags: ['api'],
@@ -31,9 +42,10 @@ module.exports = function(server) {
 
   server.route({
     method: 'POST',
-    path: '/file',
+    path: '/picture',
     handler: handlers.storeFile,
     config: {
+      // auth: false,
       payload: {
         output: 'file',
         uploads: '/tmp/',
@@ -41,15 +53,37 @@ module.exports = function(server) {
         failAction: 'log'
       },
       validate: {
-        payload: Joi.required()
+        payload: Joi.required(),
+        query: {
+          license: Joi.string().allow('CC0').required()
+        },
+        headers: Joi.object({
+          '----jwt----': Joi.string().required().description('JWT header provided by /login')
+        }).unknown()
       },
       plugins: {
         'hapi-swagger': {
-          consumes: ['image/jpeg','image/png'],
+          consumes: ['image/jpeg', 'image/png'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully uploaded and stored a picture, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to store pictures',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
         }
       },
       tags: ['api'],
-      description: 'Store a file'
+      description: 'Store a picture'
     },
   });
 };
