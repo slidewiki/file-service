@@ -20,23 +20,26 @@ const media = {
       type: 'string',
       enum: ['image/jpeg', 'image/png', 'audio/ogg', 'audio/mp3', 'audio/opus', 'video/h264', 'video/h265']
     },
-    fileName: { //uri
+    fileName: {
       type: 'string'
     },
-    thumbnailName: { //uri
+    thumbnailName: {
       type: 'string'
     },
     owner: { //userid
       type: 'number'
     },
-    license: {
+    license: { //enum?
       type: 'string',
+    },
+    copyright: {
+      type: 'string'
     },
     metadata: {
       type: 'string'
     }
   },
-  required: ['title', 'type', 'fileName', 'owner', 'license', 'metadata']
+  required: ['type', 'fileName', 'owner', 'license', 'copyright', 'metadata']
 };
 
 module.exports = ajv.compile(media);

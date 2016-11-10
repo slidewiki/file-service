@@ -4,12 +4,10 @@ const helper = require('./helper'),
   mediaModel = require('../models/media.js');
 
 module.exports = {
-  get: function(identifier) {
+  get: function(filename) {
     return helper.connectToDatabase()
       .then((db) => db.collection('media'))
-      .then((col) => col.findOne({
-        _id: identifier
-      }));
+      .then((col) => col.findOne({ $or: [{ fileName: filename }, { thumbnailName: filename }] }, { _id: 0 }));
   },
 
   insert: function(media) {

@@ -26,11 +26,14 @@ module.exports = function(server) {
         'hapi-swagger': {
           produces: ['image/jpeg', 'image/png'],
           responses: {
-            ' 404 ': {
-              'description': 'Not picture was found'
+            ' 200 ': {
+              'description': 'A pictue is provided'
             },
             ' 400 ': {
               'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No picture was found'
             }
           }
         }
@@ -38,6 +41,39 @@ module.exports = function(server) {
       tags: ['api'],
       description: 'Get a file'
     }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/metadata/{filename*}',
+    handler: handlers.getMetaData,
+    config: {
+      auth: false,
+      validate: {
+        params: {
+          filename: Joi.string()
+            .trim()
+            .required()
+        }
+      },
+      plugins: {
+        'hapi-swagger': {
+          responses: {
+            ' 200 ': {
+              'description': 'A metadata object is provided',
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No metadata was found'
+            },
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get metadata of a file'
+    },
   });
 
   server.route({
@@ -86,4 +122,6 @@ module.exports = function(server) {
       description: 'Store a picture'
     },
   });
+
+
 };
