@@ -1,6 +1,6 @@
 {
   "name": "file-service",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Serves files from a given directory via HTTP.",
   "repository": {
     "type": "git",
@@ -39,7 +39,6 @@
     "joi": "^9.0.4",
     "js-yaml": "^3.6.1",
     "mongodb": "^2.2.8",
-    "node-static": "^0.7.8",
     "vision": "^4.1.0"
   },
   "engines": {

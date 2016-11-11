@@ -63,8 +63,8 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   let metadata = child.execSync('identify -verbose ' + path + sum + fileExtension)
     .toString();
   let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
-  metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in keys (not allowed in json)
-  metaArray = metaArray.filter((line) => line.split(': ').length <= 2); //filter all lines that contain more than one ": "
+  metaArray = metaArray.filter((line) => line.split(': ').length <= 2); //exclude all lines that contain more than one ": "
+  metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in possible keys (not allowed in json)
   let metaObject = yaml.safeLoad(metaArray.join('\n'));
 
   let mimeType = metaObject['Mime type'];
