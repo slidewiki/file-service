@@ -8,6 +8,7 @@ WORKDIR /nodeApp
 #   Installation   #
 # ---------------- #
 
+RUN apt-get install imagemagick coreutils
 ADD ./application/package.json ./
 RUN npm install --production
 

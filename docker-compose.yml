@@ -10,4 +10,3 @@ fileservice:
     - VIRTUAL_HOST=fileservice.experimental.slidewiki.org
   volumes_from:
     - datapod
-  privileged: true
