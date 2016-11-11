@@ -7,6 +7,45 @@ const Joi = require('joi'),
 module.exports = function(server) {
   server.route({
     method: 'GET',
+    path: '/{filepath*}',
+    handler: {
+      directory: {
+        path: conf.fsPath
+      }
+    },
+    config: {
+      auth: false,
+      validate: {
+        params: {
+          filepath: Joi.string()
+            .uri({allowRelative: true})
+            .trim()
+            .required()
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          deprecated: true,
+          responses: {
+            ' 200 ': {
+              'description': 'A file is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No file was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a file by file path'
+    }
+  });
+
+  server.route({
+    method: 'GET',
     path: '/picture/{filename*}',
     handler: {
       directory: {
