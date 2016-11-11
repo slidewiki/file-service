@@ -39,7 +39,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Get a file'
+      description: 'Get a picture by name'
     }
   });
 
@@ -60,7 +60,7 @@ module.exports = function(server) {
         'hapi-swagger': {
           responses: {
             ' 200 ': {
-              'description': 'A metadata object is provided',
+              'description': 'A metadata json object is provided',
             },
             ' 400 ': {
               'description': 'Probably a parameter is missing or not allowed'
@@ -79,7 +79,7 @@ module.exports = function(server) {
   server.route({
     method: 'POST',
     path: '/picture',
-    handler: handlers.storeFile,
+    handler: handlers.storePicture,
     config: {
       // auth: false,
       payload: {
@@ -91,7 +91,8 @@ module.exports = function(server) {
       validate: {
         payload: Joi.required(),
         query: {
-          license: Joi.string().allow('CC0').required()
+          license: Joi.string().required().description('Specifies the license (eg. Creative Commons 4.0)'),
+          copyright: Joi.string().description('Specifies the exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)')
         },
         headers: Joi.object({
           '----jwt----': Joi.string().required().description('JWT header provided by /login')
@@ -122,6 +123,5 @@ module.exports = function(server) {
       description: 'Store a picture'
     },
   });
-
 
 };

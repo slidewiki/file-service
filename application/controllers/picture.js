@@ -22,7 +22,7 @@ module.exports = {
           if (co.isEmpty(result))
             return processPicture(request, sum, fileExtension);
           else
-            return boom.conflict('File already exists and is stored under ' + sum + fileExtension);
+            return boom.conflict('File already exists and is stored under ' + sum + fileExtension, result);
         });
     } catch (err) {
       request.log(err);
@@ -34,8 +34,8 @@ module.exports = {
 function processPicture(request, sum, fileExtension) {
   try {
     optimizePictures(request.payload.path, fileExtension, sum);
-    moveFiles(request.payload.path, sum);
-    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license);
+    child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
+    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright);
     return db.insert(file)
       .then((result) => {
         if (!co.isEmpty(result[0]))
@@ -51,19 +51,14 @@ function processPicture(request, sum, fileExtension) {
 
 function optimizePictures(originalPath, fileExtension, sum) {
   let dimensions = sizeOf(originalPath);
-  child.execSync('convert ' + originalPath + ' -resize 360 -quality 95 /tmp/' + sum + '_thumbnail' + fileExtension);
+  child.execSync('convert ' + originalPath + ' -resize 360 -quality 95 ' + conf.tmp + '/' + sum + '_thumbnail' + fileExtension);
   if (dimensions.width < 1920 && dimensions.height > 1920 || dimensions.width > 1920 && dimensions.height < 1920 || dimensions.width > 1920 && dimensions.height > 1920)
-    child.execSync('convert ' + originalPath + ' -resize 1920 -quality 95 /tmp/' + sum + fileExtension);
+    child.execSync('convert ' + originalPath + ' -resize 1920 -quality 95 ' + conf.tmp + '/' + sum + fileExtension);
   else
-    child.execSync('convert ' + originalPath + ' -quality 95 /tmp/' + sum + fileExtension);
+    child.execSync('convert ' + originalPath + ' -quality 95 ' + conf.tmp + '/' + sum + fileExtension);
 }
 
-function moveFiles(originalPath, sum) {
-  child.execSync('mv /tmp/' + sum + '* ' + conf.fsPath + '/pictures/');
-  child.execSync('rm -f ' + originalPath);
-}
-
-function createMediaObject(path, sum, fileExtension, owner, license) {
+function createMediaObject(path, sum, fileExtension, owner, license, copyright) {
   let metadata = child.execSync('identify -verbose ' + path + sum + fileExtension)
     .toString();
   let metaArray = metadata.split('\n');
@@ -75,13 +70,13 @@ function createMediaObject(path, sum, fileExtension, owner, license) {
   let title = metaArray.filter((line) => line.includes('ImageDescription:'))[0];
   if (!co.isEmpty(title)) title = title.split(': ')[1];
 
-  let copyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
+  let fileCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
   if (!co.isEmpty(copyright)) copyright = copyright.split(': ')[1];
 
   let result = { type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, metadata: metadata };
 
   if (!co.isEmpty(title)) result.title = title;
-  result.copyright = (!co.isEmpty(copyright)) ? copyright : 'Held by SlideWiki User ' + owner;
-  
+  result.copyright = (!co.isEmpty(fileCopyright)) ? fileCopyright : ((!co.isEmpty(copyright)) ? copyright : 'Held by SlideWiki User ' + owner);
+
   return result;
 }

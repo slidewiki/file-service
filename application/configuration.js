@@ -42,6 +42,7 @@ module.exports = {
     SLIDEWIKIDATABASE: 'slidewiki'
   },
   fsPath: fsPath,
+  tmp: require('os').tmpdir(),
   JWT: {
     SERIAL: JWTSerial,
     HEADER: '----jwt----',

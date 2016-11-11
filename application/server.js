@@ -43,9 +43,9 @@ let plugins = [
     options: {
       host: host,
       info: {
-        title: 'Example API',
+        title: 'Fileservice API',
         description: 'Powered by node, hapi, joi, hapi-swaggered, hapi-swaggered-ui and swagger-ui',
-        version: '0.1.0'
+        version: '0.2.0'
       }
     }
   },
