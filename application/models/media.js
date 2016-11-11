@@ -29,14 +29,15 @@ const media = {
     owner: { //userid
       type: 'number'
     },
-    license: { //enum?
+    license: {
       type: 'string',
+      enum: ['CC0', 'Creative Commons 4.0', 'Creative Commons 3.0']
     },
     copyright: {
       type: 'string'
     },
     metadata: {
-      type: 'string'
+      type: 'object'
     }
   },
   required: ['type', 'fileName', 'owner', 'license', 'copyright', 'metadata']

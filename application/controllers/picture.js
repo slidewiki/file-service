@@ -5,7 +5,8 @@ const boom = require('boom'),
   child = require('child_process'),
   conf = require('../configuration'),
   sizeOf = require('image-size'),
-  db = require('../database/mediaDatabase');
+  db = require('../database/mediaDatabase'),
+  yaml = require('js-yaml');
 
 module.exports = {
   searchPictureAndProcess: function(request) {
@@ -35,7 +36,7 @@ function processPicture(request, sum, fileExtension) {
   try {
     optimizePictures(request.payload.path, fileExtension, sum);
     child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
-    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright);
+    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright, request.query.title);
     return db.insert(file)
       .then((result) => {
         if (!co.isEmpty(result[0]))
@@ -58,22 +59,25 @@ function optimizePictures(originalPath, fileExtension, sum) {
     child.execSync('convert ' + originalPath + ' -quality 95 ' + conf.tmp + '/' + sum + fileExtension);
 }
 
-function createMediaObject(path, sum, fileExtension, owner, license, copyright) {
+function createMediaObject(path, sum, fileExtension, owner, license, copyright, newTitle) {
   let metadata = child.execSync('identify -verbose ' + path + sum + fileExtension)
     .toString();
-  let metaArray = metadata.split('\n');
+  let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
+  metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in keys (not allowed in json)
+  metaArray = metaArray.filter((line) => line.split(': ').length <= 2); //filter all lines that contain more than one ": "
+  let metaObject = yaml.safeLoad(metaArray.join('\n'));
 
-  let mimeType = metaArray.filter((line) => line.includes('Mime type:'))[0].split(': ')[1];
+  let mimeType = metaObject['Mime type'];
   if (co.isEmpty(mimeType))
     throw 'No Mime-Type found';
 
   let title = metaArray.filter((line) => line.includes('ImageDescription:'))[0];
-  if (!co.isEmpty(title)) title = title.split(': ')[1];
+  title = !co.isEmpty(title) ? title.split(': ')[1] : newTitle;
 
   let fileCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
   if (!co.isEmpty(copyright)) copyright = copyright.split(': ')[1];
 
-  let result = { type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, metadata: metadata };
+  let result = { type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, metadata: metaObject };
 
   if (!co.isEmpty(title)) result.title = title;
   result.copyright = (!co.isEmpty(fileCopyright)) ? fileCopyright : ((!co.isEmpty(copyright)) ? copyright : 'Held by SlideWiki User ' + owner);

@@ -131,7 +131,8 @@ module.exports = function(server) {
         payload: Joi.required(),
         query: {
           license: Joi.string().required().description('Specifies the license (eg. Creative Commons 4.0)'),
-          copyright: Joi.string().description('Specifies the exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)')
+          copyright: Joi.string().description('Specifies the exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
+          title: Joi.string().description('Caption of the picture')
         },
         headers: Joi.object({
           '----jwt----': Joi.string().required().description('JWT header provided by /login')
