@@ -23,7 +23,7 @@ if (!co.isEmpty(process.env.DATABASE_PORT)) {
   port = process.env.DATABASE_PORT;
 }
 
-let fsPath = '/data/files/';
+let fsPath = './';
 if (!co.isEmpty(process.env.APPLICATION_PATH)) {
   fsPath = process.env.APPLICATION_PATH;
 }
