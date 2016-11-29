@@ -64,6 +64,7 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
     .toString();
   let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
   metaArray = metaArray.filter((line) => line.split(': ').length <= 2); //exclude all lines that contain more than one ": "
+  metaArray = metaArray.filter((line) => line.search(/\S/) % 2 === 0); //exclude all lines with wrong indention
   metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in possible keys (not allowed in json)
   let metaObject = yaml.safeLoad(metaArray.join('\n'));
 
@@ -75,7 +76,7 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   title = !co.isEmpty(newTitle) ? newTitle : (!co.isEmpty(title) ? title.split(': ')[1] : undefined); //prefer submitted title
 
   let originalCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
-  originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : undefined;
+  originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : '';
   let slidewikiCopyright = !co.isEmpty(copyright) ? copyright : 'Held by SlideWiki User ' + owner;
 
   let result = {type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, slidewikiCopyright: slidewikiCopyright, originalCopyright: originalCopyright, metadata: metaObject };
