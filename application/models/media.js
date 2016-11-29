@@ -33,14 +33,17 @@ const media = {
       type: 'string',
       enum: ['CC0', 'Creative Commons 4.0', 'Creative Commons 3.0']
     },
-    copyright: {
+    originalCopyright: {
+      type: 'string'
+    },
+    slidewikiCopyright: {
       type: 'string'
     },
     metadata: {
       type: 'object'
     }
   },
-  required: ['type', 'fileName', 'owner', 'license', 'copyright', 'metadata']
+  required: ['type', 'fileName', 'owner', 'license', 'originalCopyright', 'slidewikiCopyright', 'metadata']
 };
 
 module.exports = ajv.compile(media);

@@ -40,7 +40,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Get a file by file path'
+      description: 'Get a file by file path - for backward compatibility'
     }
   });
 
@@ -130,12 +130,12 @@ module.exports = function(server) {
       validate: {
         payload: Joi.required(),
         query: {
-          license: Joi.string().required().description('Specifies the license (eg. Creative Commons 4.0)'),
-          copyright: Joi.string().description('Specifies the exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
-          title: Joi.string().description('Caption of the picture')
+          license: Joi.string().required().description('Used license (eg. Creative Commons 4.0)'),
+          copyright: Joi.string().description('Exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
+          title: Joi.string().description('Caption or Alt text of the picture')
         },
         headers: Joi.object({
-          '----jwt----': Joi.string().required().description('JWT header provided by /login')
+          '----jwt----': Joi.string().required().description('JWT header provided by the user-service or slidwiki-platform')
         }).unknown()
       },
       plugins: {

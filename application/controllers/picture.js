@@ -72,15 +72,15 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
     throw 'No Mime-Type found';
 
   let title = metaArray.filter((line) => line.includes('ImageDescription:'))[0];
-  title = !co.isEmpty(title) ? title.split(': ')[1] : newTitle;
+  title = !co.isEmpty(newTitle) ? newTitle : (!co.isEmpty(title) ? title.split(': ')[1] : undefined); //prefer submitted title
 
-  let fileCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
-  if (!co.isEmpty(copyright)) copyright = copyright.split(': ')[1];
+  let originalCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
+  originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : undefined;
+  let slidewikiCopyright = !co.isEmpty(copyright) ? copyright : 'Held by SlideWiki User ' + owner;
 
-  let result = { type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, metadata: metaObject };
+  let result = {type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, slidewikiCopyright: slidewikiCopyright, originalCopyright: originalCopyright, metadata: metaObject };
 
-  if (!co.isEmpty(title)) result.title = title;
-  result.copyright = (!co.isEmpty(fileCopyright)) ? fileCopyright : ((!co.isEmpty(copyright)) ? copyright : 'Held by SlideWiki User ' + owner);
+  if(!co.isEmpty(title)) result.title = title;
 
   return result;
 }
