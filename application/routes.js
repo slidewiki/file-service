@@ -140,7 +140,7 @@ module.exports = function(server) {
       },
       plugins: {
         'hapi-swagger': {
-          consumes: ['image/jpeg', 'image/png'],
+          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
           responses: {
             ' 200 ': {
               'description': 'Successfully uploaded and stored a picture, see response',
