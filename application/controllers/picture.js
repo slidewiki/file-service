@@ -5,8 +5,7 @@ const boom = require('boom'),
   child = require('child_process'),
   conf = require('../configuration'),
   sizeOf = require('image-size'),
-  db = require('../database/mediaDatabase'),
-  yaml = require('js-yaml');
+  db = require('../database/mediaDatabase');
 
 module.exports = {
   searchPictureAndProcess: function(request) {
@@ -65,10 +64,10 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
   metaArray = metaArray.filter((line) => line.split(': ').length <= 2); //exclude all lines that contain more than one ": "
   metaArray = metaArray.filter((line) => line.search(/\S/) % 2 === 0); //exclude all lines with wrong indention
-  metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in possible keys (not allowed in json)
-  let metaObject = yaml.safeLoad(metaArray.join('\n'));
+  //metaArray = metaArray.map((line) => line.replace(/.\../i, '-')); //replace dots in possible keys (not allowed in json)
+  let metaObject = parse(metaArray)[0];
 
-  let mimeType = metaObject['Mime type'];
+  let mimeType = metaObject.Mime_type;
   if (co.isEmpty(mimeType))
     throw 'No Mime-Type found';
 
@@ -84,4 +83,42 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   if(!co.isEmpty(title)) result.title = title;
 
   return result;
+}
+
+function parse(lines, level = 1, i = 0, z = {}) {
+
+  for ( i; i < lines.length; i++) {
+    let line = lines[i];
+    let isHeader = line[line.length - 1] === ':';
+    let lineLevel = line.search(/\S/) / 2;
+    let levelDecreased = level > lineLevel;
+
+    if (levelDecreased)
+      break;
+
+    if (isHeader) {
+      let tmp = parse(lines, lineLevel + 1, i + 1, {});
+      z[cleanKey(line.substring(0, line.length - 1))] = tmp[0];
+      i = tmp[1];
+      continue;
+    }
+
+    Object.assign(z, parseValueLine(line, {}), z);
+  }
+
+  return [z, i-1];
+}
+
+function parseValueLine(line, tmp) {
+  let contentArray = line.split(': ');
+  tmp[cleanKey(contentArray[0])] = contentArray[1];
+  return tmp;
+}
+
+function cleanKey(toclean) {
+  return toclean.toString()
+    .trim()
+    .replace(' ', '_')
+    .replace('.', '-')
+    .replace(':', '-');
 }
