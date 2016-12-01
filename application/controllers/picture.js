@@ -5,11 +5,16 @@ const boom = require('boom'),
   child = require('child_process'),
   conf = require('../configuration'),
   sizeOf = require('image-size'),
-  db = require('../database/mediaDatabase');
+  db = require('../database/mediaDatabase'),
+  readChunk = require('read-chunk'),
+  fileType = require('file-type');
 
 module.exports = {
   searchPictureAndProcess: function(request) {
     try {
+      let buffer = readChunk.sync(request.payload.path, 0, 262);
+      if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer) ? fileType(buffer).mime : null)))
+        return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
       let hasAlpha = child.execSync('identify -format "%[channels]" ' + request.payload.path)
         .toString()
         .includes('a');
@@ -26,7 +31,7 @@ module.exports = {
         });
     } catch (err) {
       request.log(err);
-      return boom.badImplementation();
+      return new Promise((resolve, reject) => resolve(boom.badImplementation()));
     }
   }
 };
