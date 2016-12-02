@@ -13,7 +13,7 @@ module.exports = {
   searchPictureAndProcess: function(request) {
     try {
       let buffer = readChunk.sync(request.payload.path, 0, 262);
-      if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer) ? fileType(buffer).mime : null)))
+      if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
         return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
       let hasAlpha = child.execSync('identify -format "%[channels]" ' + request.payload.path)
         .toString()
