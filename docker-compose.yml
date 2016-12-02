@@ -8,5 +8,7 @@ fileservice:
     - DATABASE_PORT=27017
     - APPLICATION_PATH=/data/files
     - VIRTUAL_HOST=fileservice.experimental.slidewiki.org
+  external_links:
+    - mongodb
   volumes_from:
     - datapod
