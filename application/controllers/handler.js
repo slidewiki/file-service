@@ -8,7 +8,9 @@ const boom = require('boom'),
 
 module.exports = {
   storePicture: function(request, reply) {
-    if (request.payload.bytes <= 1) { //no payload
+    if(co.isEmpty(request.payload)){
+      reply(boom.entityTooLarge('Seems like the payload was to large - 10MB max'));
+    } else if (request.payload.bytes <= 1) { //no payload
       child.execSync('rm -f ' + request.payload.path); //remove tmp file
       reply(boom.badRequest('A payload is required'));
     } else {
