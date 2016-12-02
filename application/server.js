@@ -1,23 +1,79 @@
 'use strict';
 
-let nodeStatic = require('node-static');
+const hapi = require('hapi'),
+  co = require('./common'),
+  child = require('child_process'),
+  config = require('./configuration'),
+  jwt = require('./controllers/jwt');
 
-const config = require('./configuration');
+const server = new hapi.Server({ connections: { routes: { validate: { options: { convert: false } } } } });
 
-let fileServer = new nodeStatic.Server(config.PATH, {});
+let port = (!co.isEmpty(process.env.APPLICATION_PORT)) ? process.env.APPLICATION_PORT : 3000;
+server.connection({
+  port: port
+});
+let host = (!co.isEmpty(process.env.VIRTUAL_HOST)) ? process.env.VIRTUAL_HOST : server.info.host;
 
-require('http').createServer(function (request, response) {
-  request.addListener('end', function () {
-    fileServer.serve(request, response, function (err, result) {
-      if (err) { // There was an error serving the file
-        console.error('Error serving ' + request.url + ' - ' + err.message);
+module.exports = server;
 
-        // Respond to the client
-        response.writeHead(err.status, err.headers);
-        response.end();
-      } else {
-        console.log(result.message + ' ' + request.url);
+let plugins = [
+  require('inert'),
+  require('vision'), {
+    register: require('good'),
+    options: {
+      ops: {
+        interval: 1000
+      },
+      reporters: {
+        console: [{
+          module: 'good-squeeze',
+          name: 'Squeeze',
+          args: [{
+            log: '*',
+            response: '*',
+            request: '*'
+          }]
+        }, {
+          module: 'good-console'
+        }, 'stdout']
       }
+    }
+  }, {
+    register: require('hapi-swagger'),
+    options: {
+      host: host,
+      info: {
+        title: 'Fileservice API',
+        description: 'Powered by node, hapi, joi, hapi-swaggered, hapi-swaggered-ui and swagger-ui',
+        version: '0.2.0'
+      }
+    }
+  },
+  require('hapi-auth-jwt2')
+];
+
+server.register(plugins, (err) => {
+  if (err) {
+    console.error(err);
+    global.process.exit();
+  } else {
+    server.auth.strategy('jwt', 'jwt', {
+      key: config.JWT.SERIAL,
+      validateFunc: jwt.validate,
+      verifyOptions: {
+        algorithms: [ config.JWT.ALGORITHM ],
+        ignoreExpiration: true
+      },
+      headerKey: config.JWT.HEADER
     });
-  }).resume();
-}).listen(config.PORT);
+
+    server.auth.default('jwt');
+    server.start(() => {
+      server.log('info', 'Server started at ' + server.info.uri);
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures');
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/audio');
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/videos');
+      require('./routes.js')(server);
+    });
+  }
+});

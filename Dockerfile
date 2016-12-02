@@ -1,5 +1,5 @@
-FROM node:6.4-slim
-MAINTAINER Kurt Junghanns <kjunghanns@informatik.uni-leipzig.de>
+FROM node:6.7-slim
+MAINTAINER Roy Meissner <meissner@informatik.uni-leipzig.de>
 
 RUN mkdir /nodeApp
 WORKDIR /nodeApp
@@ -8,6 +8,7 @@ WORKDIR /nodeApp
 #   Installation   #
 # ---------------- #
 
+RUN apt-get update && apt-get install -y imagemagick coreutils
 ADD ./application/package.json ./
 RUN npm install --production
 
