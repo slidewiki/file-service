@@ -20,7 +20,6 @@ host = (!co.isEmpty(process.env.DATABASE_URL)) ? process.env.DATABASE_URL : host
 if(host !== 'localhost')
   console.log('Using ' + host + ' as database host.');
 
-const co = require('./common');
 let port = 27017;
 if (!co.isEmpty(process.env.DATABASE_PORT)){
   port = process.env.DATABASE_PORT;
