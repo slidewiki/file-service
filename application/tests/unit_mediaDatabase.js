@@ -30,7 +30,8 @@ describe('Database', () => {
         thumbnailName: 'abc_thumbnail.jpg',
         owner: 33,
         license: 'CC0',
-        copyright: 'Held by no one',
+        originalCopyright: 'Held by no one',
+        slidewikiCopyright: 'Held by no one',
         metadata: {}
       };
       let res = db.insert(meta);
@@ -52,7 +53,8 @@ describe('Database', () => {
         thumbnailName: 'abc_thumbnail.jpg',
         owner: 33,
         license: 'CC0',
-        copyright: 'Held by no one',
+        originalCopyright: 'Held by no one',
+        slidewikiCopyright: 'Held by no one',
         metadata: {}
       };
       let ins = db.insert(meta);
