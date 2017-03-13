@@ -84,6 +84,44 @@ module.exports = function(server) {
 
   server.route({
     method: 'GET',
+    path: '/slideThumbnail/{filename*}',
+    handler: {
+      directory: {
+        path: conf.fsPath + 'slidethumbnails/'
+      }
+    },
+    config: {
+      auth: false,
+      validate: {
+        params: {
+          filename: Joi.string()
+            .trim()
+            .required()
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['image/jpeg', 'image/png'],
+          responses: {
+            ' 200 ': {
+              'description': 'A pictue is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No picture was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a thumbnail by name'
+    }
+  });
+
+  server.route({
+    method: 'GET',
     path: '/metadata/{filename*}',
     handler: handlers.getMetaData,
     config: {
@@ -163,6 +201,35 @@ module.exports = function(server) {
       tags: ['api'],
       description: 'Store a picture'
     },
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/slideThumbnail',
+    handler: handlers.storeThumbnail,
+    config: {
+      validate: {
+        payload: Joi.string().required().description('Actual HTML as string'),
+        query: {
+          slideID: Joi.string().lowercase().trim().required().description('ID of the slide as ID-REVISION')
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['text/plain'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully processed the HTML and stored a thumbnail, see response',
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Create thumbnail of a slide from html'
+    }
   });
 
 };

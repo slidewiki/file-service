@@ -73,6 +73,7 @@ server.register(plugins, (err) => {
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/audio');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/videos');
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/slidethumbnails');
       require('./routes.js')(server);
     });
   }
