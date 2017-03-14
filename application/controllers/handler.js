@@ -62,12 +62,14 @@ module.exports = {
       webshot(html, filePath, options, (err) => {
         if (err) {
           request.log(err);
+          request.log(html);
           response(boom.badImplementation(), err.message);
         } else
           response({ 'filename': fileName + fileType });
       });
     } catch (err) {
       request.log(err);
+      request.log(html);
       response(boom.badImplementation(), err);
     }
   }
