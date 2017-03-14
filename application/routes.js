@@ -178,14 +178,14 @@ module.exports = function(server) {
             .description('Caption or Alt text of the picture')
         },
         headers: Joi.object({
-            '----jwt----': Joi.string()
+          '----jwt----': Joi.string()
               .required()
               .description('JWT header provided by the user-service or slidwiki-platform'),
-            'content-type': Joi.string()
+          'content-type': Joi.string()
               .required()
               .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
               .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
-          })
+        })
           .unknown()
       },
       plugins: {
