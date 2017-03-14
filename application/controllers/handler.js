@@ -44,38 +44,29 @@ module.exports = {
 
   storeThumbnail: (request, response) => {
     try {
-      let filename = request.payload.slideID;
-      let filepath = path.join(conf.fsPath, 'slidethumbnails/' + filename + '.png'); //TODO implement filename
-      const html = request.payload.html;
+      const fileName = request.params.slideID;
+      const fileType = '.png';
+      const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
+      const html = request.payload;
       const options = {
-        screenSize: {
+        windowSize: {
           width: '1024',
           height: '900',
-        },
-        shotSize: {
-          width: '1024',
-          height: '900',
-        },
-        shotOffset: {
-          left: 0,
-          top: 0,
-          right: 0,
-          bottom: 0,
-        },
+        }, //using many webshot defaults
         timeout: 7000, //in ms
         siteType: 'html',
-        phantomPath: require('phantomjs2').path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
+        phantomPath: require('phantomjs2')
+          .path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
       };
 
-      webshot(html, filepath, options, (err) => {
-        if (err){
+      webshot(html, filePath, options, (err) => {
+        if (err) {
           request.log(err);
           response(boom.badImplementation(), err.message);
-        }
+        } else
+          response({ 'filename': fileName + fileType });
       });
-      response({'filename': filename});
-    }
-    catch (err) {
+    } catch (err) {
       request.log(err);
       response(boom.badImplementation(), err);
     }
