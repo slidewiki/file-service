@@ -8,7 +8,7 @@ WORKDIR /nodeApp
 #   Installation   #
 # ---------------- #
 
-RUN apt-get update && apt-get install -y imagemagick coreutils
+RUN apt-get update && apt-get install -y imagemagick coreutils bzip2 libfontconfig libfreetype6
 ADD ./application/package.json ./
 RUN npm install --production
 
