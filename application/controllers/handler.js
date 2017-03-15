@@ -45,14 +45,22 @@ module.exports = {
   storeThumbnail: (request, response) => {
     try {
       const fileName = request.params.slideID;
-      const fileType = '.png';
+      const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
       const html = request.payload;
       const options = {
         windowSize: {
           width: '1024',
-          height: '900',
-        }, //using many webshot defaults
+          height: '768',
+        },
+        shotOffset: {
+          left: 9,
+          right: 64,
+          top: 9,
+          bottom: 48
+        },
+        defaultWhiteBackground: true,
+        streamType: 'jpeg',
         timeout: 7000, //in ms
         siteType: 'html',
         phantomPath: require('phantomjs2')
@@ -64,8 +72,10 @@ module.exports = {
           request.log(err);
           request.log(html);
           response(boom.badImplementation(), err.message);
-        } else
+        } else{
+          child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
           response({ 'filename': fileName + fileType });
+        }
       });
     } catch (err) {
       request.log(err);
