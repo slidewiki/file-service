@@ -18,7 +18,7 @@ module.exports = function(server) {
       validate: {
         params: {
           filepath: Joi.string()
-            .uri({allowRelative: true})
+            .uri({ allowRelative: true })
             .trim()
             .required()
         },
@@ -84,6 +84,45 @@ module.exports = function(server) {
 
   server.route({
     method: 'GET',
+    path: '/slideThumbnail/{slideID*}',
+    handler: {
+      directory: {
+        path: conf.fsPath + 'slideThumbnails/'
+      }
+    },
+    config: {
+      auth: false,
+      validate: {
+        params: {
+          slideID: Joi.string()
+            .trim()
+            .required()
+            .description('ID of the slide as ID-REVISION')
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['image/jpeg', 'image/png'],
+          responses: {
+            ' 200 ': {
+              'description': 'A pictue is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No picture was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a thumbnail by name'
+    }
+  });
+
+  server.route({
+    method: 'GET',
     path: '/metadata/{filename*}',
     handler: handlers.getMetaData,
     config: {
@@ -130,14 +169,24 @@ module.exports = function(server) {
       validate: {
         payload: Joi.required(),
         query: {
-          license: Joi.string().required().description('Used license (eg. Creative Commons 4.0)'),
-          copyright: Joi.string().description('Exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
-          title: Joi.string().description('Caption or Alt text of the picture')
+          license: Joi.string()
+            .required()
+            .description('Used license (eg. Creative Commons 4.0)'),
+          copyright: Joi.string()
+            .description('Exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
+          title: Joi.string()
+            .description('Caption or Alt text of the picture')
         },
         headers: Joi.object({
-          '----jwt----': Joi.string().required().description('JWT header provided by the user-service or slidwiki-platform'),
-          'content-type':  Joi.string().required().valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp').description('Mime-Type of the uploaded image'),//additinally tested in picture.js on the actual file
-        }).unknown()
+          '----jwt----': Joi.string()
+              .required()
+              .description('JWT header provided by the user-service or slidwiki-platform'),
+          'content-type': Joi.string()
+              .required()
+              .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
+              .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+        })
+          .unknown()
       },
       plugins: {
         'hapi-swagger': {
@@ -163,6 +212,42 @@ module.exports = function(server) {
       tags: ['api'],
       description: 'Store a picture'
     },
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/slideThumbnail/{slideID*}',
+    handler: handlers.storeThumbnail,
+    config: {
+      auth: false,
+      validate: {
+        payload: Joi.string()
+          .required()
+          .description('Actual HTML as string'),
+        params: {
+          slideID: Joi.string()
+            .lowercase()
+            .trim()
+            .required()
+            .description('ID of the slide as ID-REVISION')
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['text/plain'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully processed the HTML and stored a thumbnail, see response',
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Create thumbnail of a slide from html'
+    }
   });
 
 };

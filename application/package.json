@@ -40,7 +40,9 @@
     "joi": "^10.2.0",
     "mongodb": "^2.2.22",
     "read-chunk": "^2.0.0",
-    "vision": "^4.1.1"
+    "phantomjs2": "^2.2.0",
+    "vision": "^4.1.1",
+    "webshot": "^0.18.0"
   },
   "engines": {
     "node": ">=6.9.0"
