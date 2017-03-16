@@ -22,3 +22,14 @@ The service uses /tmp as a directory for temporary files. It can be speeded up m
 
 ### Configuration ###
 The environment variable APPLICATION_PATH defines which folder is used to store and serve media files.
+
+## Migrate thumbnails ##
+```
+cd /data/files
+find ./ -name thumbnails -type d -exec find {} -name *.png \; > list
+while read in; do cp "$in" /data/files/slideThumbnails/ ; done < list
+cd slideThumbnails
+for i in *.png ; do convert "$i" "${i%.*}.jpeg" ; done
+find . -name "*.png" -type f -delete
+```
+
