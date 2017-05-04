@@ -7,7 +7,8 @@ const boom = require('boom'),
   co = require('../common'),
   conf = require('../configuration'),
   path = require('path'),
-  webshot = require('webshot');
+  webshot = require('webshot'),
+  Joi = require('joi');
 
 module.exports = {
   storePicture: function(request, reply) {
@@ -82,5 +83,26 @@ module.exports = {
       request.log(html);
       response(boom.badImplementation(), err);
     }
+  },
+
+  getPicturesOfUser: (request, reply) => {
+    Joi.number().integer().validate(request.params.userid, (err, value) => {
+      if(!co.isEmpty(err)){
+        request.log(err);
+        reply(boom.badRequest('child \"userid\" fails because [\"userid\" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
+      } else {
+        db.search(value)
+          .then((result) => {
+            if(co.isEmpty(result))
+              reply(boom.notFound());
+            else
+              reply(result);
+          })
+          .catch((err) => {
+            request.log(err);
+            reply(boom.badImplementation(), err);
+          });
+      }
+    });
   }
 };

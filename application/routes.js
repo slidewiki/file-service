@@ -250,4 +250,35 @@ module.exports = function(server) {
     }
   });
 
+  server.route({
+    method: 'GET',
+    path: '/search/pictures/{userid}',
+    handler: handlers.getPicturesOfUser,
+    config: {
+      auth: false,
+      validate: {
+        params: {
+          userid: Joi.string().required()
+        }
+      },
+      plugins: {
+        'hapi-swagger': {
+          responses: {
+            ' 200 ': {
+              'description': 'A json array is provided, containing all images that were found',
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No pictures for user with userid found'
+            },
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get all pictures of a user'
+    },
+  });
+
 };
