@@ -25,9 +25,9 @@ module.exports = {
       });
   },
 
-  search: function(userID) {
+  search: function(userID, mediaType) {//TODO distringuish for images, audio, video
     return helper.connectToDatabase()
       .then((db) => db.collection('media'))
-      .then((col) => col.find({ 'owner': userID }, {_id: 0, title: 1, type: 1, fileName: 1, thumbnailName: 1, license: 1, originalCopyright: 1, slidewikiCopyright: 1}).toArray());
+      .then((col) => col.find({ owner: userID }, {_id: 0, title: 1, type: 1, fileName: 1, thumbnailName: 1, license: 1, originalCopyright: 1, slidewikiCopyright: 1}).toArray());
   },
 };

@@ -252,33 +252,45 @@ module.exports = function(server) {
 
   server.route({
     method: 'GET',
-    path: '/search/pictures/{userid}',
-    handler: handlers.getPicturesOfUser,
+    path: '/search/media/{userid}',
+    handler: handlers.getMediaOfUser,
     config: {
       auth: false,
       validate: {
         params: {
-          userid: Joi.string().required()
+          userid: Joi.string().required().description('Identifier of a user'),
+        },
+        query: {
+          mediaType: Joi.string().valid('pictures', 'video', 'audio').required()
         }
       },
       plugins: {
         'hapi-swagger': {
           responses: {
             ' 200 ': {
-              'description': 'A json array is provided, containing all images that were found',
+              'description': 'A json array is provided, containing all media that was found',
             },
             ' 400 ': {
               'description': 'Probably a parameter is missing or not allowed'
             },
             ' 404 ': {
-              'description': 'No pictures for user with userid found'
+              'description': 'No media for user with userid found'
             },
           }
         }
       },
       tags: ['api'],
-      description: 'Get all pictures of a user'
+      description: 'Get all media of a user by media type',
+      response: {
+        schema: Joi.array().items(Joi.object().keys({
+          type: Joi.string(),
+          fileName: Joi.string(),
+          thumbnailName: Joi.string(),
+          license: Joi.string(),
+          slidewikiCopyright: Joi.string(),
+          originalCopyright: Joi.string().allow('')
+        })),
+      }
     },
   });
-
 };

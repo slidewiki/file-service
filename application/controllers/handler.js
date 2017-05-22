@@ -85,23 +85,29 @@ module.exports = {
     }
   },
 
-  getPicturesOfUser: (request, reply) => {
+  getMediaOfUser: (request, reply) => {
     Joi.number().integer().validate(request.params.userid, (err, value) => {
       if(!co.isEmpty(err)){
         request.log(err);
         reply(boom.badRequest('child \"userid\" fails because [\"userid\" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
       } else {
-        db.search(value)
-          .then((result) => {
-            if(co.isEmpty(result))
-              reply(boom.notFound());
-            else
-              reply(result);
-          })
-          .catch((err) => {
-            request.log(err);
-            reply(boom.badImplementation(), err);
-          });
+        switch (request.query.mediaType) {
+          case 'pictures':
+            db.search(value, request.query.mediaType)
+              .then((result) => {
+                if(co.isEmpty(result))
+                  reply(boom.notFound());
+                else
+                  reply(result);
+              })
+              .catch((err) => {
+                request.log(err);
+                reply(boom.badImplementation(), err);
+              });
+            break;
+          default:
+            reply(boom.notFound());
+        }
       }
     });
   }
