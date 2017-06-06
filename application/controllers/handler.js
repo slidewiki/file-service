@@ -51,8 +51,8 @@ module.exports = {
       const html = request.payload;
       const options = {
         windowSize: {
-          width: 'all',
-          height: 'all',
+          width: '1024',
+          height: '768',
         },
         shotOffset: {
           left: 9,
