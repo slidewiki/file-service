@@ -1,5 +1,5 @@
 fileservice:
-  image: slidewiki/fileservice
+  image: slidewiki/fileservice:latest-dev
   restart: on-failure:5
   expose:
     - "80"
