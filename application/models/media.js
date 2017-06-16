@@ -16,6 +16,9 @@ const media = {
     title: {
       type: 'string'
     },
+    altText: {
+      type: 'string'
+    },
     type: {
       type: 'string',
       enum: ['image/jpeg', 'image/png', 'audio/ogg', 'audio/mp3', 'audio/opus', 'video/h264', 'video/h265']

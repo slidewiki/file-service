@@ -175,7 +175,9 @@ module.exports = function(server) {
           copyright: Joi.string()
             .description('Exact copyright and copyright holder (e.g. CC-BY-SA SlideWiki user 33)'),
           title: Joi.string()
-            .description('Caption or Alt text of the picture')
+            .description('Caption of the picture'),
+          altText: Joi.string()
+            .description('Alt text of the picture')
         },
         headers: Joi.object({
           '----jwt----': Joi.string()

@@ -40,7 +40,7 @@ function processPicture(request, sum, fileExtension) {
   try {
     optimizePictures(request.payload.path, fileExtension, sum);
     child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
-    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright, request.query.title);
+    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright, request.query.title, request.query.altText);
     return db.insert(file)
       .then((result) => {
         if (!co.isEmpty(result[0]))
@@ -63,7 +63,7 @@ function optimizePictures(originalPath, fileExtension, sum) {
     child.execSync('convert ' + originalPath + ' -quality 95 ' + conf.tmp + '/' + sum + fileExtension);
 }
 
-function createMediaObject(path, sum, fileExtension, owner, license, copyright, newTitle) {
+function createMediaObject(path, sum, fileExtension, owner, license, copyright, newTitle, altText) {
   let metadata = child.execSync('identify -verbose ' + path + sum + fileExtension)
     .toString();
   let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
@@ -83,7 +83,7 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : '';
   let slidewikiCopyright = !co.isEmpty(copyright) ? copyright : 'Held by SlideWiki User ' + owner;
 
-  let result = {type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, slidewikiCopyright: slidewikiCopyright, originalCopyright: originalCopyright, metadata: metaObject };
+  let result = {type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, slidewikiCopyright: slidewikiCopyright, originalCopyright: originalCopyright, metadata: metaObject, altText: altText };
 
   if(!co.isEmpty(title)) result.title = title;
 
