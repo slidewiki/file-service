@@ -42,7 +42,8 @@
     "read-chunk": "^2.0.0",
     "phantomjs2": "^2.2.0",
     "vision": "^4.1.1",
-    "webshot": "^0.18.0"
+    "webshot": "^0.18.0",
+    "cheerio": "^0.22.0"
   },
   "engines": {
     "node": ">=6.9.0"
