@@ -8,7 +8,8 @@ const boom = require('boom'),
   conf = require('../configuration'),
   path = require('path'),
   cheerio = require('cheerio'),
-  webshot = require('webshot');
+  webshot = require('webshot'),
+  Joi = require('joi');
 
 module.exports = {
   storePicture: function(request, reply) {
@@ -54,8 +55,8 @@ module.exports = {
       let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
       pptxwidth = pptxwidth ? pptxwidth : 0;
       pptxheight = pptxheight ? pptxheight : 0;
-      let width = 1024;
-      let height = 768;
+      let width = 0;
+      let height = 0;
       if (pptxwidth !== 0 && pptxheight !== 0) {
         width = pptxwidth;
         height = pptxheight;
@@ -64,7 +65,7 @@ module.exports = {
         height = 'all';
       }
       const options = {
-        windowSize: {
+        shotSize: {
           width: width,
           height: height,
         },
