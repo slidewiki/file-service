@@ -110,5 +110,27 @@ module.exports = {
         }
       }
     });
+  },
+
+  storeProfilepicture: (request, reply) => {
+    console.log(request.auth.credentials.username, 'tries to upload the profile picture');
+    if(co.isEmpty(request.payload)){
+      reply(boom.entityTooLarge('Seems like the payload was to large - 2MB max'));
+    } else if (request.payload.bytes <= 1) { //no payload
+      child.execSync('rm -f ' + request.payload.path); //remove tmp file
+      reply(boom.badRequest('A payload is required'));
+    } else if (request.params.username !== request.auth.credentials.username) {
+      reply(boom.forbidden());
+    }
+    else {
+      return picture.saveProfilepicture(request)
+        .then((url) => reply(url))
+        .catch((err) => {
+          request.log(err);
+          reply(boom.badImplementation(), err);
+        })
+        .then(() => child.execSync('rm -f ' + request.payload.path))
+        .catch((err) => request.log(err));
+    }
   }
 };

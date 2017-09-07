@@ -293,4 +293,60 @@ module.exports = function(server) {
       }
     },
   });
+
+  server.route({
+    method: 'PUT',
+    path: '/profilepicture/{username}',
+    handler: handlers.storeProfilepicture,
+    config: {
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 2185760, //2MB
+        failAction: 'log'
+      },
+      validate: {
+        params: {
+          username: Joi.string().required()
+        },
+        payload: Joi.required(),
+        headers: Joi.object({
+          '----jwt----': Joi.string()
+              .required()
+              .description('JWT header provided by the user-service or slidwiki-platform'),
+          'content-type': Joi.string()
+              .required()
+              .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
+              .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+        })
+          .unknown()
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully uploaded and stored a picture, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to store pictures',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 403 ': {
+              'description': 'You are not allowed to change the picture of another user',
+            },
+            ' 413 ': {
+              'description': 'The image is too big - have to be lower than 2MB',
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Store a profile picture'
+    },
+  });
 };
