@@ -302,7 +302,7 @@ module.exports = function(server) {
       payload: {
         output: 'file',
         uploads: '/tmp/',
-        maxBytes: 2185760, //2MB
+        maxBytes: 2097152, //2MB
         failAction: 'log'
       },
       validate: {
@@ -346,7 +346,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Store a profile picture'
+      description: 'Store your profile picture'
     },
   });
 };
