@@ -38,7 +38,7 @@ module.exports = {
   saveProfilepicture: function(request) {
     let userName = request.auth.credentials.username.toLowerCase();
     let buffer = readChunk.sync(request.payload.path, 0, 262);
-    if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
+    if(!['image/png'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
       return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
     let filetype = '.' + fileType(buffer).ext;
 
