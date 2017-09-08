@@ -302,7 +302,7 @@ module.exports = function(server) {
       payload: {
         output: 'file',
         uploads: '/tmp/',
-        maxBytes: 2097152, //2MB
+        maxBytes: 819200, //800KB
         failAction: 'log'
       },
       validate: {
@@ -316,14 +316,14 @@ module.exports = function(server) {
               .description('JWT header provided by the user-service or slidwiki-platform'),
           'content-type': Joi.string()
               .required()
-              .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
-              .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+              .valid('image/png')
+              .description('Mime-Type of the uploaded image')
         })
           .unknown()
       },
       plugins: {
         'hapi-swagger': {
-          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
+          consumes: ['image/png'],
           responses: {
             ' 200 ': {
               'description': 'Successfully uploaded and stored a picture, see response',
@@ -346,7 +346,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Store your profile picture'
+      description: 'Store your profile picture. Have to be png and smaller than 800KB.'
     },
   });
 };
