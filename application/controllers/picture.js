@@ -36,12 +36,14 @@ module.exports = {
   },
 
   saveProfilepicture: function(request) {
+    let userName = request.auth.credentials.username.toLowerCase();
     let buffer = readChunk.sync(request.payload.path, 0, 262);
     if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
       return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
+    let filetype = '.' + fileType(buffer).ext;
 
-    child.execSync('mv ' + request.payload.path + ' ' + conf.fsPath + 'pictures/profile/' + request.auth.credentials.username);
-    return new Promise((resolve, reject) => resolve('/pictures/profile/' + request.auth.credentials.username));
+    child.execSync('mv ' + request.payload.path + ' ' + conf.fsPath + 'pictures/profile/' + userName + filetype);
+    return new Promise((resolve, reject) => resolve('/pictures/profile/' + userName + filetype));
   }
 };
 
