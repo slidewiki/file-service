@@ -337,16 +337,16 @@ module.exports = function(server) {
               }
             },
             ' 403 ': {
-              'description': 'You are not allowed to change the picture of another user',
+              'description': 'You are not allowed to exchange the picture of another user',
             },
             ' 413 ': {
-              'description': 'The image is too big - have to be lower than 2MB',
+              'description': 'The image is too large. Images have to be less than 2MB',
             }
           }
         }
       },
       tags: ['api'],
-      description: 'Store your profile picture. Have to be png and smaller than 800KB.'
+      description: 'Store your profile picture'
     },
   });
 };
