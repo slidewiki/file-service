@@ -1,4 +1,5 @@
 'use strict';
+/*eslint promise/no-callback-in-promise: "off"*/
 
 describe('Database', () => {
 

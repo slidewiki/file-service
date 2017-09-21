@@ -1,5 +1,5 @@
 'use strict';
-/* eslint promise/always-return: "off", promise/no-promise-in-callback: "off" */
+/*eslint promise/always-return: "off", promise/no-promise-in-callback: "off"*/
 
 const boom = require('boom'),
   child = require('child_process'),
@@ -89,7 +89,7 @@ module.exports = {
     Joi.number().integer().validate(request.params.userid, (err, value) => {
       if(!co.isEmpty(err)){
         request.log(err);
-        reply(boom.badRequest('child \"userid\" fails because [\"userid\" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
+        reply(boom.badRequest('child "userid" fails because ["userid" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
       } else {
         switch (request.query.mediaType) {
           case 'pictures':
