@@ -1,4 +1,5 @@
 'use strict';
+/* eslint promise/always-return: "off", promise/no-promise-in-callback: "off" */
 
 const boom = require('boom'),
   child = require('child_process'),
@@ -80,7 +81,6 @@ module.exports = {
       });
     } catch (err) {
       request.log(err);
-      request.log(html);
       response(boom.badImplementation(), err);
     }
   },
