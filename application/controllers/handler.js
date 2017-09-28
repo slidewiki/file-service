@@ -7,6 +7,7 @@ const boom = require('boom'),
   co = require('../common'),
   conf = require('../configuration'),
   path = require('path'),
+  cheerio = require('cheerio'),
   webshot = require('webshot'),
   Joi = require('joi');
 
@@ -49,10 +50,24 @@ module.exports = {
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
       const html = request.payload;
+      let document = cheerio.load(html);
+      let pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
+      let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+      pptxwidth = pptxwidth ? pptxwidth : 0;
+      pptxheight = pptxheight ? pptxheight : 0;
+      let width = 0;
+      let height = 0;
+      if (pptxwidth !== 0 && pptxheight !== 0) {
+        width = pptxwidth;
+        height = pptxheight;
+      } else {
+        width = 'all';
+        height = 'all';
+      }
       const options = {
-        windowSize: {
-          width: '1024',
-          height: '768',
+        shotSize: {
+          width: width,
+          height: height,
         },
         shotOffset: {
           left: 9,
@@ -80,7 +95,7 @@ module.exports = {
       });
     } catch (err) {
       request.log(err);
-      request.log(html);
+      //request.log(html);
       response(boom.badImplementation(), err);
     }
   },
