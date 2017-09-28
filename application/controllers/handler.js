@@ -146,7 +146,7 @@ module.exports = {
             reply({url: url});
           else
             reply(url);
-        }
+        })
         .catch((err) => {
           try {
             child.execSync('rm -f ' + request.payload.path);
