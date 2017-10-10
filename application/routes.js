@@ -339,6 +339,9 @@ module.exports = function(server) {
             ' 403 ': {
               'description': 'You are not allowed to exchange the picture of another user',
             },
+            ' 406 ': {
+              'description': 'The images has the wrong dimensions. It should be in a ratio one to one.',
+            },
             ' 413 ': {
               'description': 'The image is too large. Images have to be less than 2MB',
             }

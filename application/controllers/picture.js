@@ -36,6 +36,9 @@ module.exports = {
   },
 
   saveProfilepicture: function(request) {
+    let dimensions = sizeOf(request.payload.path);
+    if (dimensions.height !== dimensions.width)
+      return new Promise((resolve, reject) => resolve(boom.notAcceptable()));
     let username = request.auth.credentials.username.toLowerCase();
     let buffer = readChunk.sync(request.payload.path, 0, 262);
     if(!['image/png'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))

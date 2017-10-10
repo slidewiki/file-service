@@ -7,6 +7,7 @@ const boom = require('boom'),
   co = require('../common'),
   conf = require('../configuration'),
   path = require('path'),
+  cheerio = require('cheerio'),
   webshot = require('webshot'),
   Joi = require('joi');
 
@@ -49,10 +50,24 @@ module.exports = {
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
       const html = request.payload;
+      let document = cheerio.load(html);
+      let pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
+      let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+      pptxwidth = pptxwidth ? pptxwidth : 0;
+      pptxheight = pptxheight ? pptxheight : 0;
+      let width = 0;
+      let height = 0;
+      if (pptxwidth !== 0 && pptxheight !== 0) {
+        width = pptxwidth;
+        height = pptxheight;
+      } else {
+        width = 'all';
+        height = 'all';
+      }
       const options = {
-        windowSize: {
-          width: '1024',
-          height: '768',
+        shotSize: {
+          width: width,
+          height: height,
         },
         shotOffset: {
           left: 9,
@@ -80,7 +95,7 @@ module.exports = {
       });
     } catch (err) {
       request.log(err);
-      request.log(html);
+      //request.log(html);
       response(boom.badImplementation(), err);
     }
   },
@@ -115,22 +130,36 @@ module.exports = {
   storeProfilepicture: (request, reply) => {
     console.log(request.auth.credentials.username, 'tries to upload the profile picture');
     if(co.isEmpty(request.payload)){
+      child.execSync('rm -f ' + request.payload.path);
       reply(boom.entityTooLarge('Seems like the payload was to large - 2MB max'));
     } else if (request.payload.bytes <= 1) { //no payload
       child.execSync('rm -f ' + request.payload.path); //remove tmp file
       reply(boom.badRequest('A payload is required'));
     } else if (request.params.username !== request.auth.credentials.username) {
+      child.execSync('rm -f ' + request.payload.path);
       reply(boom.forbidden());
     }
     else {
       return picture.saveProfilepicture(request)
-        .then((url) => reply(url))
+        .then((url) => {
+          if (typeof url === 'string')
+            reply({url: url});
+          else
+            reply(url);
+        })
         .catch((err) => {
+          try {
+            child.execSync('rm -f ' + request.payload.path);
+          } catch (e) {
+
+          }
           request.log(err);
           reply(boom.badImplementation(), err);
         })
         .then(() => child.execSync('rm -f ' + request.payload.path))
-        .catch((err) => request.log(err));
+        .catch((err) => {
+          request.log(err);
+        });
     }
   }
 };
