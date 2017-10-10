@@ -302,7 +302,7 @@ module.exports = function(server) {
       payload: {
         output: 'file',
         uploads: '/tmp/',
-        maxBytes: 819200, //800KB
+        maxBytes: 153600, //150KB
         failAction: 'log'
       },
       validate: {
