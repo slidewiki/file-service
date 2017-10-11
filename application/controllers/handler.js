@@ -152,7 +152,7 @@ module.exports = {
           try {
             child.execSync('rm -f ' + request.payload.path);
           } catch (e) {
-
+            console.log('Failed to remove temp file');
           }
           request.log(err);
           reply(boom.badImplementation(), err);
