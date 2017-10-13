@@ -14,7 +14,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           filepath: Joi.string()
@@ -53,7 +52,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           filename: Joi.string()
@@ -91,7 +89,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           slideID: Joi.string()
@@ -126,7 +123,6 @@ module.exports = function(server) {
     path: '/metadata/{filename*}',
     handler: handlers.getMetaData,
     config: {
-      auth: false,
       validate: {
         params: {
           filename: Joi.string()
@@ -159,7 +155,7 @@ module.exports = function(server) {
     path: '/picture',
     handler: handlers.storePicture,
     config: {
-      // auth: false,
+      auth: 'jwt',
       payload: {
         output: 'file',
         uploads: '/tmp/',
@@ -219,7 +215,6 @@ module.exports = function(server) {
     path: '/slideThumbnail/{slideID*}',
     handler: handlers.storeThumbnail,
     config: {
-      auth: false,
       validate: {
         payload: Joi.string()
           .required()
@@ -255,7 +250,6 @@ module.exports = function(server) {
     path: '/search/media/{userid}',
     handler: handlers.getMediaOfUser,
     config: {
-      auth: false,
       validate: {
         params: {
           userid: Joi.string().required().description('Identifier of a user'),
