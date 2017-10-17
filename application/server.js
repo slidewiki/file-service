@@ -67,10 +67,10 @@ server.register(plugins, (err) => {
       headerKey: config.JWT.HEADER
     });
 
-    server.auth.default('jwt');
     server.start(() => {
       server.log('info', 'Server started at ' + server.info.uri);
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures');
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures/profile');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/audio');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/videos');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/slideThumbnails');

@@ -33,6 +33,20 @@ module.exports = {
       request.log(err);
       return new Promise((resolve, reject) => resolve(boom.badImplementation()));
     }
+  },
+
+  saveProfilepicture: function(request) {
+    let dimensions = sizeOf(request.payload.path);
+    if (dimensions.height !== dimensions.width)
+      return new Promise((resolve, reject) => resolve(boom.notAcceptable()));
+    let username = request.auth.credentials.username.toLowerCase();
+    let buffer = readChunk.sync(request.payload.path, 0, 262);
+    if(!['image/png'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
+      return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
+    let filetype = '.' + fileType(buffer).ext;
+
+    child.execSync('mv ' + request.payload.path + ' ' + conf.fsPath + 'pictures/profile/' + username + filetype);
+    return new Promise((resolve, reject) => resolve('/pictures/profile/' + username + filetype));
   }
 };
 

@@ -14,7 +14,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           filepath: Joi.string()
@@ -53,7 +52,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           filename: Joi.string()
@@ -91,7 +89,6 @@ module.exports = function(server) {
       }
     },
     config: {
-      auth: false,
       validate: {
         params: {
           slideID: Joi.string()
@@ -126,7 +123,6 @@ module.exports = function(server) {
     path: '/metadata/{filename*}',
     handler: handlers.getMetaData,
     config: {
-      auth: false,
       validate: {
         params: {
           filename: Joi.string()
@@ -159,7 +155,7 @@ module.exports = function(server) {
     path: '/picture',
     handler: handlers.storePicture,
     config: {
-      // auth: false,
+      auth: 'jwt',
       payload: {
         output: 'file',
         uploads: '/tmp/',
@@ -221,7 +217,6 @@ module.exports = function(server) {
     path: '/slideThumbnail/{slideID*}',
     handler: handlers.storeThumbnail,
     config: {
-      auth: false,
       validate: {
         payload: Joi.string()
           .required()
@@ -257,7 +252,6 @@ module.exports = function(server) {
     path: '/search/media/{userid}',
     handler: handlers.getMediaOfUser,
     config: {
-      auth: false,
       validate: {
         params: {
           userid: Joi.string().required().description('Identifier of a user'),
@@ -293,6 +287,65 @@ module.exports = function(server) {
           originalCopyright: Joi.string().allow('')
         })),
       }
+    },
+  });
+
+  server.route({
+    method: 'PUT',
+    path: '/profilepicture/{username}',
+    handler: handlers.storeProfilepicture,
+    config: {
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 153600, //150KB
+        failAction: 'log'
+      },
+      validate: {
+        params: {
+          username: Joi.string().required()
+        },
+        payload: Joi.required(),
+        headers: Joi.object({
+          '----jwt----': Joi.string()
+              .required()
+              .description('JWT header provided by the user-service or slidwiki-platform'),
+          'content-type': Joi.string()
+              .required()
+              .valid('image/png')
+              .description('Mime-Type of the uploaded image')
+        })
+          .unknown()
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['image/png'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully uploaded and stored a picture, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to store pictures',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 403 ': {
+              'description': 'You are not allowed to exchange the picture of another user',
+            },
+            ' 406 ': {
+              'description': 'The images has the wrong dimensions. It should be in a ratio one to one.',
+            },
+            ' 413 ': {
+              'description': 'The image is too large. Images have to be less than 2MB',
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Store your profile picture'
     },
   });
 };
