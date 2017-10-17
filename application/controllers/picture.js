@@ -54,7 +54,7 @@ function processPicture(request, sum, fileExtension) {
   try {
     optimizePictures(request.payload.path, fileExtension, sum);
     child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
-    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.license, request.query.copyright, request.query.title, request.query.altText);
+    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.title, request.query.altText, request.query.license, request.query.copyrightHolder, request.query.copyrightHolderURL, request.query.copyrightAdditions, request.query.copyright);
     return db.insert(file)
       .then((result) => {
         if (!co.isEmpty(result[0]))
@@ -77,7 +77,9 @@ function optimizePictures(originalPath, fileExtension, sum) {
     child.execSync('convert ' + originalPath + ' -quality 95 ' + conf.tmp + '/' + sum + fileExtension);
 }
 
-function createMediaObject(path, sum, fileExtension, owner, license, copyright, newTitle, altText) {
+//NOTE parameter copyright is used for backward compatibility to an deprecated route
+//NOTE currently only used to store pictures, thus thumbnailName is always filled (even though not explicitly required)
+function createMediaObject(path, sum, fileExtension, owner, newTitle, altText, license, copyrightHolder, copyrightHolderURL, copyrightAdditions, copyright) {
   let metadata = child.execSync('identify -verbose ' + path + sum + fileExtension)
     .toString();
   let metaArray = metadata.split('\n').filter((line) => line.includes(':')).filter((_,i) => i !== 0); //exclude first line
@@ -94,12 +96,25 @@ function createMediaObject(path, sum, fileExtension, owner, license, copyright, 
   title = !co.isEmpty(newTitle) ? newTitle : (!co.isEmpty(title) ? title.split(': ')[1] : undefined); //prefer submitted title
 
   let originalCopyright = metaArray.filter((line) => line.includes('Copyright:'))[0];
-  originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : '';
-  let slidewikiCopyright = !co.isEmpty(copyright) ? copyright : 'Held by SlideWiki User ' + owner;
+  originalCopyright = !co.isEmpty(originalCopyright) ? originalCopyright.split(': ')[1] : undefined;
 
-  let result = {type: mimeType, fileName: sum + fileExtension, thumbnailName: sum + '_thumbnail' + fileExtension, owner: owner, license: license, slidewikiCopyright: slidewikiCopyright, originalCopyright: originalCopyright, metadata: metaObject, altText: altText };
+  copyrightAdditions = !co.isEmpty(copyright) ? copyright : copyrightAdditions;
 
+  let result = {
+    type: mimeType,
+    fileName: sum + fileExtension,
+    thumbnailName: sum + '_thumbnail' + fileExtension,
+    owner: owner,
+    license: license,
+    metadata: metaObject
+  };
+  //optional values
   if(!co.isEmpty(title)) result.title = title;
+  if(!co.isEmpty(altText)) result.altText = altText;
+  if(!co.isEmpty(copyrightHolder)) result.copyrightHolder = { name: copyrightHolder};
+  if(!co.isEmpty(copyrightHolderURL)) result.copyrightHolder.url = copyrightHolderURL;
+  if(!co.isEmpty(copyrightAdditions)) result.copyrightAdditions = copyrightAdditions;
+  if(!co.isEmpty(originalCopyright)) result.originalCopyright = originalCopyright;
 
   return result;
 }

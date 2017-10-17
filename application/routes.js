@@ -173,7 +173,74 @@ module.exports = function(server) {
           title: Joi.string()
             .description('Caption of the picture'),
           altText: Joi.string()
-            .description('Alt text of the picture')
+            .description('Alt text of the picture'),
+
+        },
+        headers: Joi.object({
+          '----jwt----': Joi.string()
+              .required()
+              .description('JWT header provided by the user-service or slidwiki-platform'),
+          'content-type': Joi.string()
+              .required()
+              .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
+              .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+        })
+          .unknown()
+      },
+      plugins: {
+        'hapi-swagger': {
+          deprecated: true,
+          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully uploaded and stored a picture, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to store pictures',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Store a picture - use /v2/picture instead'
+    },
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/v2/picture',
+    handler: handlers.storePicture,
+    config: {
+      auth: 'jwt',
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 10485760, //10MB
+        failAction: 'log'
+      },
+      validate: {
+        payload: Joi.required(),
+        query: {
+          title: Joi.string()
+            .description('Caption/Title of the picture'),
+          altText: Joi.string()
+            .description('Alternative text for the picture'),
+          license: Joi.string()
+            .required().description('Used license as abbreviation (eg. "CC BY-SA 4.0")'),
+          copyrightHolder: Joi.string()
+            .description('Name of the copyright holder (e.g. "Jhon Doe")'),
+          copyrightHolderURL: Joi.string().uri()
+            .description('URL to the homepage (or social profile or ...) of the copyright holder (e.g. "https://doe.github.io"'),
+          copyrightAdditions: Joi.string()
+            .description('Any additional information to the copyright information, that the license might require')
         },
         headers: Joi.object({
           '----jwt----': Joi.string()
