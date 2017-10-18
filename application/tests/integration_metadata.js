@@ -4,6 +4,8 @@ describe('REST API', () => {
 
   let server,db;
 
+  const secret = 'NeverShareYourSecret';
+
   beforeEach((done) => {
     //Clean everything up before doing new tests
     Object.keys(require.cache).forEach((key) => delete require.cache[key]);
@@ -15,9 +17,23 @@ describe('REST API', () => {
       host: 'localhost',
       port: 3000
     });
-    server.register(require('inert'));
-    require('../routes.js')(server);
-    done();
+
+    server.register([require('inert'), require('hapi-auth-jwt2')], (err) => {
+      if (err) {
+        console.error(err);
+        global.process.exit();
+      } else {
+        server.auth.strategy('jwt', 'jwt', {
+          key: secret,
+          validateFunc: (decoded, request, callback) => {callback(null, true);},
+          headerKey: '----jwt----',
+        });
+      }
+
+      require('../routes.js')(server);
+      done();
+    });
+
   });
 
   let meta = {
