@@ -293,6 +293,7 @@ module.exports = function(server) {
     path: '/profilepicture/{username}',
     handler: handlers.storeProfilepicture,
     config: {
+      auth: 'jwt',
       payload: {
         output: 'file',
         uploads: '/tmp/',
