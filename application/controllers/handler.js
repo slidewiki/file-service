@@ -9,7 +9,10 @@ const boom = require('boom'),
   path = require('path'),
   cheerio = require('cheerio'),
   webshot = require('webshot'),
-  Joi = require('joi');
+  Joi = require('joi'),
+  Microservices = require('../configs/microservices'),
+  juice = require('juice'),
+  rp = require('request-promise-native');
 
 module.exports = {
   storePicture: function(request, reply) {
@@ -44,55 +47,84 @@ module.exports = {
       });
   },
 
+
+
   storeThumbnail: (request, response) => {
     try {
+      console.log('storeThumbnail', request);
       const fileName = request.params.slideID;
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
-      const html = request.payload;
-      let document = cheerio.load(html);
-      let pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
-      let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
-      pptxwidth = pptxwidth ? pptxwidth : 0;
-      pptxheight = pptxheight ? pptxheight : 0;
-      let width = 0;
-      let height = 0;
-      if (pptxwidth !== 0 && pptxheight !== 0) {
-        width = pptxwidth;
-        height = pptxheight;
-      } else {
-        width = 'all';
-        height = 'all';
-      }
-      const options = {
-        shotSize: {
-          width: width,
-          height: height,
-        },
-        shotOffset: {
-          left: 9,
-          right: 64,
-          top: 9,
-          bottom: 48
-        },
-        defaultWhiteBackground: true,
-        streamType: 'jpeg',
-        timeout: 7000, //in ms
-        siteType: 'html',
-        phantomPath: require('phantomjs2')
-          .path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
-      };
+      let html = request.payload;
+      let theme = 'sky';
+      // let theme = (request.params.theme && request.params.theme !== '' && typeof request.params.theme !== 'undefined')
+      //   ? request.params.theme : 'default';
+      //   // if{
+      //
+      //       reveal.getCSS(request.query.theme).then((css) => {
+      //           console.log(css);
+      //           for(let i=0; i < deckTree.children.length; i++){
+      //               deckTree.children[i].content = reveal.applyThemeToSlideHTML(html, css);
+      //           }
+      //           reply(deckTree);
+      //       // });
+      //
+      getCss(theme).then((css) => {
 
-      webshot(html, filePath, options, (err) => {
-        if (err) {
-          request.log(err);
-          request.log(html);
-          response(boom.badImplementation(), err.message);
-        } else{
-          child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
-          response({ 'filename': fileName + fileType });
+        html = applyThemeToSlideHTML(html, css);
+
+        let document = cheerio.load(html);
+        let pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
+        let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+        pptxwidth = pptxwidth ? pptxwidth : 0;
+        pptxheight = pptxheight ? pptxheight : 0;
+        let width = 0;
+        let height = 0;
+        if (pptxwidth !== 0 && pptxheight !== 0) {
+          width = pptxwidth;
+          height = pptxheight;
+        } else {
+          width = 'all';
+          height = 'all';
         }
+        const options = {
+          shotSize: {
+            width: width,
+            height: height,
+          },
+          shotOffset: {
+            left: 9,
+            right: 64,
+            top: 9,
+            bottom: 48
+          },
+          defaultWhiteBackground: true,
+          streamType: 'jpeg',
+          timeout: 7000, //in ms
+          siteType: 'html',
+          phantomPath: require('phantomjs2')
+            .path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
+        };
+
+        webshot(html, filePath, options, (err) => {
+          if (err) {
+            request.log(err);
+            request.log(html);
+            response(boom.badImplementation(), err.message);
+          } else{
+            child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
+            response({ 'filename': fileName + fileType });
+          }
+        });
+
+
+        // console.log(css);
+      }).catch((err) => {
+        request.log('Error getting theme', err);
+        reply(boom.badImplementation());
       });
+
+
     } catch (err) {
       request.log(err);
       //request.log(html);
@@ -163,3 +195,20 @@ module.exports = {
     }
   }
 };
+
+
+
+// This is needed for the thumbnail generation
+function applyThemeToSlideHTML(content, css){
+  // console.log(content, '\n\n\n');
+  let head = '<head><style type="text/css">' + css + '</style></head>';
+  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
+  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
+  html = juice(html);
+  return html;
+}
+
+function getCss(theme){
+  let req_path = Microservices.platform.uri + '/custom_modules/reveal.js/css/theme/' + theme + '.css';
+  return rp(req_path);
+}
