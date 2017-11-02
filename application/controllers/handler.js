@@ -51,24 +51,13 @@ module.exports = {
 
   storeThumbnail: (request, response) => {
     try {
-      console.log('storeThumbnail', request);
       const fileName = request.params.slideID;
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
       let html = request.payload;
-      let theme = 'sky';
-      // let theme = (request.params.theme && request.params.theme !== '' && typeof request.params.theme !== 'undefined')
-      //   ? request.params.theme : 'default';
-      //   // if{
-      //
-      //       reveal.getCSS(request.query.theme).then((css) => {
-      //           console.log(css);
-      //           for(let i=0; i < deckTree.children.length; i++){
-      //               deckTree.children[i].content = reveal.applyThemeToSlideHTML(html, css);
-      //           }
-      //           reply(deckTree);
-      //       // });
-      //
+      let theme = request.params.theme;
+      //TODO: Check for cases where there is no theme and handle
+
       getCss(theme).then((css) => {
 
         html = applyThemeToSlideHTML(html, css);
@@ -109,7 +98,6 @@ module.exports = {
         webshot(html, filePath, options, (err) => {
           if (err) {
             request.log(err);
-            request.log(html);
             response(boom.badImplementation(), err.message);
           } else{
             child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
@@ -117,8 +105,6 @@ module.exports = {
           }
         });
 
-
-        // console.log(css);
       }).catch((err) => {
         request.log('Error getting theme', err);
         reply(boom.badImplementation());
@@ -127,7 +113,6 @@ module.exports = {
 
     } catch (err) {
       request.log(err);
-      //request.log(html);
       response(boom.badImplementation(), err);
     }
   },
@@ -196,11 +181,9 @@ module.exports = {
   }
 };
 
-
-
 // This is needed for the thumbnail generation
 function applyThemeToSlideHTML(content, css){
-  // console.log(content, '\n\n\n');
+
   let head = '<head><style type="text/css">' + css + '</style></head>';
   let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
   let html = '<!DOCTYPE html><html>' + head + body + '</html>';
