@@ -227,7 +227,7 @@ module.exports = function(server) {
             .description('ID of the slide as ID-REVISION'),
           theme: Joi.string()
             .optional()
-            .valid('blood', 'night', 'beige', 'league', 'serif', 'solarized', 'white', 'black', 'moon', 'simple', 'epub')
+            .valid('default', 'blood', 'night', 'beige', 'league', 'serif', 'solarized', 'white', 'black', 'moon', 'simple', 'epub')
             .description('Theme to apply to the thumbnail')
         },
       },
