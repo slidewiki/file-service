@@ -104,7 +104,7 @@ module.exports = {
     Joi.number().integer().validate(request.params.userid, (err, value) => {
       if(!co.isEmpty(err)){
         request.log(err);
-        reply(boom.badRequest('child \"userid\" fails because [\"userid\" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
+        reply(boom.badRequest('child "userid " fails because ["userid" needs to be a number]","validation":{"source":"params","keys":["userid"]}}'));
       } else {
         switch (request.query.mediaType) {
           case 'pictures':
@@ -151,7 +151,7 @@ module.exports = {
           try {
             child.execSync('rm -f ' + request.payload.path);
           } catch (e) {
-
+            console.log(e);
           }
           request.log(err);
           reply(boom.badImplementation(), err);

@@ -175,12 +175,12 @@ module.exports = function(server) {
         },
         headers: Joi.object({
           '----jwt----': Joi.string()
-              .required()
-              .description('JWT header provided by the user-service or slidwiki-platform'),
+            .required()
+            .description('JWT header provided by the user-service or slidwiki-platform'),
           'content-type': Joi.string()
-              .required()
-              .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
-              .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+            .required()
+            .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
+            .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
         })
           .unknown()
       },
@@ -307,12 +307,12 @@ module.exports = function(server) {
         payload: Joi.required(),
         headers: Joi.object({
           '----jwt----': Joi.string()
-              .required()
-              .description('JWT header provided by the user-service or slidwiki-platform'),
+            .required()
+            .description('JWT header provided by the user-service or slidwiki-platform'),
           'content-type': Joi.string()
-              .required()
-              .valid('image/png')
-              .description('Mime-Type of the uploaded image')
+            .required()
+            .valid('image/png')
+            .description('Mime-Type of the uploaded image')
         })
           .unknown()
       },
