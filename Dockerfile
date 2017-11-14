@@ -1,4 +1,4 @@
-FROM node:6.9-slim
+FROM node:6.11-slim
 MAINTAINER Roy Meissner <meissner@informatik.uni-leipzig.de>
 
 RUN mkdir /nodeApp
@@ -9,10 +9,8 @@ WORKDIR /nodeApp
 # ---------------- #
 
 RUN apt-get update && apt-get install -y imagemagick coreutils bzip2 libfontconfig libfreetype6
-ADD ./application/package.json ./
-RUN npm install --production
-
 ADD ./application/ ./
+RUN npm prune --production
 
 # ----------------- #
 #   Configuration   #

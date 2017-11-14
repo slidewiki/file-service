@@ -1,4 +1,5 @@
 'use strict';
+/*eslint promise/catch-or-return: "off"*/
 
 describe('REST API', () => {
 
@@ -76,7 +77,7 @@ describe('REST API', () => {
     it('should reply it by the filename', (done) => {
       let tmp = Object.assign({}, meta);
       db.insert(tmp).then(
-        server.inject(options1, (response) => {() =>
+        server.inject(options1, (response) => {
           response.should.be.an('object').and.contain.keys('statusCode','payload');
           response.statusCode.should.equal(200);
           response.payload.should.be.an('string');
@@ -91,7 +92,7 @@ describe('REST API', () => {
     it('should reply it by the thumbnailname', (done) => {
       let tmp = Object.assign({}, meta);
       db.insert(tmp).then(
-        server.inject(options2, (response) => {() =>
+        server.inject(options2, (response) => {
           response.should.be.an('object').and.contain.keys('statusCode','payload');
           response.statusCode.should.equal(200);
           response.payload.should.be.an('string');
@@ -104,7 +105,7 @@ describe('REST API', () => {
     });
     context('when metadata is not available', () => {
       it('should reply with 404', (done) => {
-        server.inject(options3, (response) => {() =>
+        server.inject(options3, (response) => {
           response.should.be.an('object').and.contain.keys('statusCode','payload');
           response.statusCode.should.equal(404);
           response.payload.should.be.an('string');
