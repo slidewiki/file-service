@@ -212,7 +212,7 @@ module.exports = function(server) {
 
   server.route({
     method: 'POST',
-    path: '/slideThumbnail/{slideID}/{theme}',
+    path: '/slideThumbnail/{slideID}/{theme*}',
     handler: handlers.storeThumbnail,
     config: {
       validate: {
@@ -226,8 +226,8 @@ module.exports = function(server) {
             .required()
             .description('ID of the slide as ID-REVISION'),
           theme: Joi.string()
-            .optional()
-            .valid('default', 'blood', 'sky', 'night', 'beige', 'league', 'serif', 'solarized', 'white', 'black', 'moon', 'simple', 'epub')
+            .default('default')
+            .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
             .description('Theme to apply to the thumbnail')
         },
       },
