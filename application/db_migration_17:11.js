@@ -19,10 +19,11 @@ getPictures({})
         {'_id': record._id},
         { '$unset': {'slidewikiCopyright': ''},
           '$set': {'copyrightHolder': {'name': 'User ' + record.owner}, 'copyrightAdditions': 'Migrated record, copyright information might be incomplete.'}
-        }).then(() => {
-          process.stdout.write('\rUpdated record ' + record._id + ' (out of order)');
-          callback();
-        });
+        })
+      .then(() => {
+        process.stdout.write('\rUpdated record ' + record._id + ' (out of order)');
+        callback();
+      });
     }, Infinity);
 
     cursor.forEach((record) => {
