@@ -46,14 +46,18 @@ module.exports = {
 
   storeThumbnail: (request, response) => {
     try {
-      console.log(request.payload);
       const fileName = request.params.slideID;
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
       const html = request.payload;
       let document = cheerio.load(html);
-      let pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
-      let pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+      let pptxheight = 0, pptxwidth = 0;
+      try {
+        pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
+        pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+      } catch (e) {
+        //There's probably no css in the slide
+      }
       pptxwidth = pptxwidth ? pptxwidth : 0;
       pptxheight = pptxheight ? pptxheight : 0;
       let width = 0;
