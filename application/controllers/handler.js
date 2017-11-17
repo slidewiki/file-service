@@ -46,6 +46,7 @@ module.exports = {
 
   storeThumbnail: (request, response) => {
     try {
+      console.log(request.payload);
       const fileName = request.params.slideID;
       const fileType = '.jpeg';
       const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
