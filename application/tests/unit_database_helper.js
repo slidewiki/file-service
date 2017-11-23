@@ -27,7 +27,7 @@ describe('Database', () => {
         db.should.be.fulfilled,
         db.should.eventually.not.be.empty,
         db.should.eventually.have.property('s').that.is.not.empty,
-        db.should.eventually.have.deep.property('s.databaseName', 'local')
+        db.should.eventually.have.nested.property('s.databaseName', 'local')
       ]);
     });
 

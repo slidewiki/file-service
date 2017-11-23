@@ -40,8 +40,8 @@ describe('Database', () => {
       return Promise.all([
         res.should.be.fulfilled.and.eventually.not.be.empty,
         res.should.eventually.have.property('ops').that.is.not.empty,
-        res.should.eventually.have.deep.property('ops[0]').that.has.all.keys(keys),
-        res.should.eventually.have.deep.property('ops[0].title', meta.title)
+        res.should.eventually.have.nested.property('ops[0]').that.has.all.keys(keys),
+        res.should.eventually.have.nested.property('ops[0]').that.has.property('.title', meta.title)
       ]);
     });
 

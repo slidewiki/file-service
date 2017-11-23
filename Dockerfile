@@ -1,5 +1,8 @@
-FROM node:6.9-slim
+FROM node:6-slim
 MAINTAINER Roy Meissner <meissner@informatik.uni-leipzig.de>
+
+ARG BUILD_ENV=local
+ENV BUILD_ENV ${BUILD_ENV}
 
 RUN mkdir /nodeApp
 WORKDIR /nodeApp
@@ -9,11 +12,8 @@ WORKDIR /nodeApp
 # ---------------- #
 
 RUN apt-get update && apt-get install -y imagemagick coreutils bzip2 libfontconfig libfreetype6
-ADD ./application/package.json ./
-RUN npm install --production
-
 ADD ./application/ ./
-
+RUN if [ "$BUILD_ENV" = "travis" ] ; then npm prune --production ; else rm -R node_modules ; npm install --production ; fi
 # ----------------- #
 #   Configuration   #
 # ----------------- #
