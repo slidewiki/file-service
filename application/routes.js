@@ -3,6 +3,10 @@
 const Joi = require('joi'),
   handlers = require('./controllers/handler'),
   path = require('path'),
+  boom = require('boom'),
+  Microservices = require('./configs/microservices'),
+  fs = require('fs'),
+  rp = require('request-promise-native'),
   conf = require('./configuration');
 
 module.exports = function(server) {
@@ -465,15 +469,47 @@ module.exports = function(server) {
     path: '/thumbnail/slide/{id}/{theme?}',
     handler: {
       file: (request) => {
-        let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.id);
-        if (request.params.theme) {
-          filePath = path.join(filePath, request.params.theme);
-        }
-        // all thumbnails are generated as JPEG files
-        return filePath + '.jpeg';
+        return request.pre.filePath;
       },
     },
     config: {
+
+      pre: [
+        {
+          method: (request, reply) => {
+            let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.id);
+            if (request.params.theme) {
+              filePath = path.join(filePath, request.params.theme);
+            }
+            // all thumbnails are generated as JPEG files
+            filePath += '.jpeg'
+
+            fs.exists(filePath, (found) => {
+              if (found) return reply(filePath);
+
+              // try and fetch the slide contents to create the thumbnail
+              rp.get({
+                uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
+                json: true,
+              }).then((res) => {
+                request.payload = res.revisions[0].content;
+                handlers.storeThumbnail(request, (response) => {
+                  if (response.isBoom) return reply(response); // end the request by returning the error
+                  reply(filePath);
+                });
+              }).catch((err) => {
+                if (err.statusCode === 404) return reply(boom.notFound());
+
+                request.log('error', err);
+                reply(boom.badImplementation());
+              });
+
+            });
+          },
+          assign: 'filePath',
+        }
+      ],
+
       validate: {
         params: {
           id: Joi.string()

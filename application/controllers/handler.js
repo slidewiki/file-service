@@ -12,6 +12,7 @@ const boom = require('boom'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
   juice = require('juice'),
+  fs = require('fs'),
   rp = require('request-promise-native');
 
 module.exports = {
@@ -61,6 +62,8 @@ module.exports = {
         filePath = path.join(filePath, theme);
       }
       filePath = filePath + fileType;
+
+      if (fs.existsSync(filePath)) return response({ 'filename': fileName + fileType });
 
       if (theme) {
         html = applyThemeToSlideHTML(html, theme);
