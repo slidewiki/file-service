@@ -8,6 +8,8 @@ fileservice:
     - DATABASE_PORT=27017
     - APPLICATION_PATH=/data/files
     - VIRTUAL_HOST=fileservice.experimental.slidewiki.org
+    - SERVICE_URL_DECK=https://deckservice.experimental.slidewiki.org
+    - SERVICE_URL_PLATFORM=https://platform.experimental.slidewiki.org
     - DATABASE_URL=mongodb # use a url or the name, defined in the docker-compose file
     - LETSENCRYPT_HOST=fileservice.experimental.slidewiki.org
     - LETSENCRYPT_EMAIL=meissner@informatik.uni-leipzig.de

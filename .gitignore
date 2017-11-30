@@ -34,5 +34,8 @@ node_modules
 
 .coveralls.yml
 
-# thumbnails dev storage
+# created files in dev mode
+application/pictures
+application/audio
+application/videos
 application/slideThumbnails

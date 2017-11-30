@@ -85,7 +85,6 @@ module.exports = function(server) {
     }
   });
 
-  // deprecated
   server.route({
     method: 'GET',
     path: '/slideThumbnail/{id*}',
@@ -105,7 +104,8 @@ module.exports = function(server) {
       },
       plugins: {
         'hapi-swagger': {
-          produces: ['image/jpeg', 'image/png'],
+          deprecated: true,
+          produces: ['image/jpeg'],
           responses: {
             ' 200 ': {
               'description': 'A pictue is provided'
@@ -285,7 +285,6 @@ module.exports = function(server) {
     },
   });
 
-  // deprecated
   server.route({
     method: 'POST',
     path: '/slideThumbnail/{id*}',
@@ -305,6 +304,7 @@ module.exports = function(server) {
       },
       plugins: {
         'hapi-swagger': {
+          deprecated: true,
           consumes: ['text/plain'],
           responses: {
             ' 200 ': {
@@ -431,17 +431,11 @@ module.exports = function(server) {
     handler: handlers.storeThumbnail,
     config: {
       validate: {
-        payload: Joi.string()
-          .required()
-          .description('Actual HTML as string'),
+        options: { convert: true },
+        payload: Joi.string().required().description('HTML of a slide as a string'),
         params: {
-          id: Joi.string()
-            .lowercase()
-            .trim()
-            .required()
-            .description('ID of the slide as ID-REVISION'),
-          theme: Joi.string()
-            .default('default')
+          id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
+          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
             .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
             .description('Theme to apply to the thumbnail'),
         },
@@ -473,58 +467,54 @@ module.exports = function(server) {
       },
     },
     config: {
-
       pre: [
         {
           method: (request, reply) => {
-            let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.id);
-            if (request.params.theme) {
-              filePath = path.join(filePath, request.params.theme);
-            }
-            // all thumbnails are generated as JPEG files
-            filePath += '.jpeg'
+            let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
 
             fs.exists(filePath, (found) => {
-              if (found) return reply(filePath);
-
-              // try and fetch the slide contents to create the thumbnail
-              rp.get({
-                uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
-                json: true,
-              }).then((res) => {
-                request.payload = res.revisions[0].content;
-                handlers.storeThumbnail(request, (response) => {
-                  if (response.isBoom) return reply(response); // end the request by returning the error
-                  reply(filePath);
+              if (found)
+                reply(filePath);
+              else {//NOTE fetch the slide content to create the thumbnail
+                rp.get({
+                  uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
+                  json: true,
+                /*eslint-disable promise/always-return*/
+                }).then((res) => {
+                  request.payload = res.revisions[0].content;
+                  handlers.storeThumbnail(request, (response) => {
+                    if (response.isBoom)
+                      reply(response); //NOTE end the request by returning the error
+                    else
+                      reply(filePath);
+                  });
+                /*eslint-enable promise/always-return*/
+                }).catch((err) => {
+                  if (err.statusCode === 404)
+                    reply(boom.notFound());
+                  else {
+                    request.log('error', err);
+                    reply(boom.badImplementation());
+                  }
                 });
-              }).catch((err) => {
-                if (err.statusCode === 404) return reply(boom.notFound());
-
-                request.log('error', err);
-                reply(boom.badImplementation());
-              });
-
+              }
             });
           },
           assign: 'filePath',
         }
       ],
-
       validate: {
+        options: { convert: true },
         params: {
-          id: Joi.string()
-            .trim()
-            .required()
-            .description('ID of the slide as ID-REVISION'),
-          theme: Joi.string()
-            .default('default')
+          id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
+          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
             .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
-            .description('Theme to apply to the thumbnail'),
+            .description('Theme to apply to the thumbnail')
         },
       },
       plugins: {
         'hapi-swagger': {
-          produces: ['image/jpeg', 'image/png'],
+          produces: ['image/jpeg'],
           responses: {
             ' 200 ': {
               'description': 'A pictue is provided'
@@ -539,7 +529,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Get a thumbnail by slide id and theme'
+      description: 'Get a thumbnail by slide id and theme. e.g. by requesting "1" or "1.jpeg" or "1/beige" or "1/beige.jpeg"'
     }
   });
 

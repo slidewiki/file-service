@@ -13,7 +13,7 @@ const boom = require('boom'),
   Microservices = require('../configs/microservices'),
   juice = require('juice'),
   fs = require('fs'),
-  rp = require('request-promise-native');
+  rp = require('request-promise-native');//QUESTION not used?!
 
 module.exports = {
   storePicture: function(request, reply) {
@@ -36,38 +36,37 @@ module.exports = {
 
   getMetaData: function(request, reply) {
     db.get(request.params.filename)
+      /*eslint-disable promise/always-return*/
       .then((result) => {
         if(co.isEmpty(result))
           reply(boom.notFound());
         else
           reply(result);
-      })
+      })/*eslint-enable promise/always-return*/
       .catch((err) => {
         request.log(err);
         reply(boom.badImplementation(), err);
       });
+
   },
-
-
 
   storeThumbnail: (request, response) => {
     try {
+
       const fileName = request.params.id;
       const fileType = '.jpeg';
-      let filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName);
+      const theme = (request.params.theme) ? request.params.theme : 'default';
+      let filePath = path.join(conf.fsPath, 'slideThumbnails', theme, fileName + fileType);
       let html = request.payload;
+      let toReturn = { 'filename': fileName + fileType, 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': fileType};
 
-      let theme = request.params.theme;
-      if (theme) {
-        filePath = path.join(filePath, theme);
-      }
-      filePath = filePath + fileType;
+      if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
+        filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + fileType);
 
-      if (fs.existsSync(filePath)) return response({ 'filename': fileName + fileType });
+      if (fs.existsSync(filePath))
+        return response(toReturn);
 
-      if (theme) {
-        html = applyThemeToSlideHTML(html, theme);
-      }
+      html = applyThemeToSlideHTML(html, theme);
 
       let document = cheerio.load(html);
       let pptxheight = 0, pptxwidth = 0;
@@ -113,7 +112,7 @@ module.exports = {
           response(boom.badImplementation(), err.message);
         } else{
           child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
-          response({ 'filename': fileName + fileType });
+          response(toReturn);
         }
       });
 
@@ -131,13 +130,14 @@ module.exports = {
       } else {
         switch (request.query.mediaType) {
           case 'pictures':
+            /*eslint-disable promise/no-promise-in-callback, promise/always-return*/
             db.search(value, request.query.mediaType)
               .then((result) => {
                 if(co.isEmpty(result))
                   reply(boom.notFound());
                 else
                   reply(result);
-              })
+              })/*eslint-enable promise/no-promise-in-callback, promise/always-return*/
               .catch((err) => {
                 request.log(err);
                 reply(boom.badImplementation(), err);
@@ -164,12 +164,12 @@ module.exports = {
     }
     else {
       return picture.saveProfilepicture(request)
-        .then((url) => {
+        .then((url) => {/*eslint-disable promise/always-return*/
           if (typeof url === 'string')
             reply({url: url});
           else
             reply(url);
-        })
+        })/*eslint-enable promise/always-return*/
         .catch((err) => {
           try {
             child.execSync('rm -f ' + request.payload.path);
@@ -187,7 +187,6 @@ module.exports = {
   }
 };
 
-// This is needed for the thumbnail generation
 function applyThemeToSlideHTML(content, theme){
   let head = `<head>
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/reveal.css" />
