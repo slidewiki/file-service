@@ -15,7 +15,7 @@ const boom = require('boom'),
   fs = require('fs'),
   rp = require('request-promise-native');//QUESTION not used?!
 
-module.exports = {
+let handlers = module.exports = {
   storePicture: function(request, reply) {
     if(co.isEmpty(request.payload)){
       reply(boom.entityTooLarge('Seems like the payload was to large - 10MB max'));
@@ -120,6 +120,39 @@ module.exports = {
       request.log(err);
       response(boom.badImplementation(), err);
     }
+  },
+
+  findOrCreateThumbnail: (request, reply) => {
+    let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
+
+    fs.exists(filePath, (found) => {
+      if (found)
+        reply(filePath);
+      else {//NOTE fetch the slide content to create the thumbnail
+        rp.get({
+          uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
+          json: true,
+        /*eslint-disable promise/always-return*/
+        }).then((res) => {
+          request.payload = res.revisions[0].content;
+          handlers.storeThumbnail(request, (response) => {
+            if (response.isBoom)
+              reply(response); //NOTE end the request by returning the error
+            else
+              reply(filePath);
+          });
+        /*eslint-enable promise/always-return*/
+        }).catch((err) => {
+          if (err.statusCode === 404)
+            reply(boom.notFound());
+          else {
+            request.log('error', err);
+            reply(boom.badImplementation());
+          }
+        });
+      }
+    });
+
   },
 
   getMediaOfUser: (request, reply) => {

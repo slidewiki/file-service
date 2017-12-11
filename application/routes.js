@@ -2,11 +2,6 @@
 
 const Joi = require('joi'),
   handlers = require('./controllers/handler'),
-  path = require('path'),
-  boom = require('boom'),
-  Microservices = require('./configs/microservices'),
-  fs = require('fs'),
-  rp = require('request-promise-native'),
   conf = require('./configuration');
 
 module.exports = function(server) {
@@ -469,37 +464,7 @@ module.exports = function(server) {
     config: {
       pre: [
         {
-          method: (request, reply) => {
-            let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
-
-            fs.exists(filePath, (found) => {
-              if (found)
-                reply(filePath);
-              else {//NOTE fetch the slide content to create the thumbnail
-                rp.get({
-                  uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
-                  json: true,
-                /*eslint-disable promise/always-return*/
-                }).then((res) => {
-                  request.payload = res.revisions[0].content;
-                  handlers.storeThumbnail(request, (response) => {
-                    if (response.isBoom)
-                      reply(response); //NOTE end the request by returning the error
-                    else
-                      reply(filePath);
-                  });
-                /*eslint-enable promise/always-return*/
-                }).catch((err) => {
-                  if (err.statusCode === 404)
-                    reply(boom.notFound());
-                  else {
-                    request.log('error', err);
-                    reply(boom.badImplementation());
-                  }
-                });
-              }
-            });
-          },
+          method: handlers.findOrCreateThumbnail,
           assign: 'filePath',
         }
       ],
