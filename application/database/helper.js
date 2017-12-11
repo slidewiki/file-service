@@ -39,19 +39,20 @@ function getNextId(db, collectionName, fieldName) {
   const step = incrementationSettings.step;
 
   let myPromise = new Promise((resolve, reject) => {
-    return db.collection(incrementationSettings.collection).findAndModify({
-      _id: collectionName,
-      field: fieldNameCorrected
-    },
-    null, //no sort
-    {
-      $inc: {
-        seq: step
-      }
-    }, {
-      upsert: true, //if there is a problem with _id insert will fail
-      new: true //insert returns the updated document
-    })
+    return db.collection(incrementationSettings.collection).findAndModify(
+      {
+        _id: collectionName,
+        field: fieldNameCorrected
+      },
+      null, //no sort
+      {
+        $inc: {
+          seq: step
+        }
+      }, {
+        upsert: true, //if there is a problem with _id insert will fail
+        new: true //insert returns the updated document
+      })
       .then((result) => {
         console.log('getNextId: returned result', result);
         if (result.value && result.value.seq) {

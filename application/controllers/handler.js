@@ -9,9 +9,13 @@ const boom = require('boom'),
   path = require('path'),
   cheerio = require('cheerio'),
   webshot = require('webshot'),
-  Joi = require('joi');
+  Joi = require('joi'),
+  Microservices = require('../configs/microservices'),
+  juice = require('juice'),
+  fs = require('fs'),
+  rp = require('request-promise-native');//QUESTION not used?!
 
-module.exports = {
+let handlers = module.exports = {
   storePicture: function(request, reply) {
     if(co.isEmpty(request.payload)){
       reply(boom.entityTooLarge('Seems like the payload was to large - 10MB max'));
@@ -32,24 +36,38 @@ module.exports = {
 
   getMetaData: function(request, reply) {
     db.get(request.params.filename)
+      /*eslint-disable promise/always-return*/
       .then((result) => {
         if(co.isEmpty(result))
           reply(boom.notFound());
         else
           reply(result);
-      })
+      })/*eslint-enable promise/always-return*/
       .catch((err) => {
         request.log(err);
         reply(boom.badImplementation(), err);
       });
+
   },
 
   storeThumbnail: (request, response) => {
     try {
-      const fileName = request.params.slideID;
+
+      const fileName = request.params.id;
       const fileType = '.jpeg';
-      const filePath = path.join(conf.fsPath, 'slideThumbnails/' + fileName + fileType);
-      const html = request.payload;
+      const theme = (request.params.theme) ? request.params.theme : 'default';
+      let filePath = path.join(conf.fsPath, 'slideThumbnails', theme, fileName + fileType);
+      let html = request.payload;
+      let toReturn = { 'filename': fileName + fileType, 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': fileType};
+
+      if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
+        filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + fileType);
+
+      if (fs.existsSync(filePath))
+        return response(toReturn);
+
+      html = applyThemeToSlideHTML(html, theme);
+
       let document = cheerio.load(html);
       let pptxheight = 0, pptxwidth = 0;
       try {
@@ -91,18 +109,50 @@ module.exports = {
       webshot(html, filePath, options, (err) => {
         if (err) {
           request.log(err);
-          request.log(html);
           response(boom.badImplementation(), err.message);
         } else{
           child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
-          response({ 'filename': fileName + fileType });
+          response(toReturn);
         }
       });
+
     } catch (err) {
       request.log(err);
-      //request.log(html);
       response(boom.badImplementation(), err);
     }
+  },
+
+  findOrCreateThumbnail: (request, reply) => {
+    let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
+
+    fs.exists(filePath, (found) => {
+      if (found)
+        reply(filePath);
+      else {//NOTE fetch the slide content to create the thumbnail
+        rp.get({
+          uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
+          json: true,
+        /*eslint-disable promise/always-return*/
+        }).then((res) => {
+          request.payload = res.revisions[0].content;
+          handlers.storeThumbnail(request, (response) => {
+            if (response.isBoom)
+              reply(response); //NOTE end the request by returning the error
+            else
+              reply(filePath);
+          });
+        /*eslint-enable promise/always-return*/
+        }).catch((err) => {
+          if (err.statusCode === 404)
+            reply(boom.notFound());
+          else {
+            request.log('error', err);
+            reply(boom.badImplementation());
+          }
+        });
+      }
+    });
+
   },
 
   getMediaOfUser: (request, reply) => {
@@ -113,13 +163,14 @@ module.exports = {
       } else {
         switch (request.query.mediaType) {
           case 'pictures':
+            /*eslint-disable promise/no-promise-in-callback, promise/always-return*/
             db.search(value, request.query.mediaType)
               .then((result) => {
                 if(co.isEmpty(result))
                   reply(boom.notFound());
                 else
                   reply(result);
-              })
+              })/*eslint-enable promise/no-promise-in-callback, promise/always-return*/
               .catch((err) => {
                 request.log(err);
                 reply(boom.badImplementation(), err);
@@ -146,12 +197,12 @@ module.exports = {
     }
     else {
       return picture.saveProfilepicture(request)
-        .then((url) => {
+        .then((url) => {/*eslint-disable promise/always-return*/
           if (typeof url === 'string')
             reply({url: url});
           else
             reply(url);
-        })
+        })/*eslint-enable promise/always-return*/
         .catch((err) => {
           try {
             child.execSync('rm -f ' + request.payload.path);
@@ -168,3 +219,16 @@ module.exports = {
     }
   }
 };
+
+function applyThemeToSlideHTML(content, theme){
+  let head = `<head>
+  <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/reveal.css" />
+  <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/theme/${theme}.css" />
+  </head>`;
+
+  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
+  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
+
+  html = juice(html);
+  return html;
+}

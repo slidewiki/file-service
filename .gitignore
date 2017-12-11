@@ -33,3 +33,9 @@ node_modules
 .node_repl_history
 
 .coveralls.yml
+
+# created files in dev mode
+application/pictures
+application/audio
+application/videos
+application/slideThumbnails

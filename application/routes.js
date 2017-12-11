@@ -82,7 +82,7 @@ module.exports = function(server) {
 
   server.route({
     method: 'GET',
-    path: '/slideThumbnail/{slideID*}',
+    path: '/slideThumbnail/{id*}',
     handler: {
       directory: {
         path: conf.fsPath + 'slideThumbnails/'
@@ -91,7 +91,7 @@ module.exports = function(server) {
     config: {
       validate: {
         params: {
-          slideID: Joi.string()
+          id: Joi.string()
             .trim()
             .required()
             .description('ID of the slide as ID-REVISION')
@@ -99,7 +99,8 @@ module.exports = function(server) {
       },
       plugins: {
         'hapi-swagger': {
-          produces: ['image/jpeg', 'image/png'],
+          deprecated: true,
+          produces: ['image/jpeg'],
           responses: {
             ' 200 ': {
               'description': 'A pictue is provided'
@@ -281,7 +282,7 @@ module.exports = function(server) {
 
   server.route({
     method: 'POST',
-    path: '/slideThumbnail/{slideID*}',
+    path: '/slideThumbnail/{id*}',
     handler: handlers.storeThumbnail,
     config: {
       validate: {
@@ -289,7 +290,7 @@ module.exports = function(server) {
           .required()
           .description('Actual HTML as string'),
         params: {
-          slideID: Joi.string()
+          id: Joi.string()
             .lowercase()
             .trim()
             .required()
@@ -298,6 +299,7 @@ module.exports = function(server) {
       },
       plugins: {
         'hapi-swagger': {
+          deprecated: true,
           consumes: ['text/plain'],
           responses: {
             ' 200 ': {
@@ -416,4 +418,84 @@ module.exports = function(server) {
       description: 'Store your profile picture'
     },
   });
+
+
+  server.route({
+    method: 'POST',
+    path: '/thumbnail/slide/{id}/{theme?}',
+    handler: handlers.storeThumbnail,
+    config: {
+      validate: {
+        options: { convert: true },
+        payload: Joi.string().required().description('HTML of a slide as a string'),
+        params: {
+          id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
+          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
+            .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
+            .description('Theme to apply to the thumbnail'),
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['text/plain'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully processed the HTML and stored a thumbnail, see response',
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Create thumbnail of a slide from html'
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/thumbnail/slide/{id}/{theme?}',
+    handler: {
+      file: (request) => {
+        return request.pre.filePath;
+      },
+    },
+    config: {
+      pre: [
+        {
+          method: handlers.findOrCreateThumbnail,
+          assign: 'filePath',
+        }
+      ],
+      validate: {
+        options: { convert: true },
+        params: {
+          id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
+          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
+            .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
+            .description('Theme to apply to the thumbnail')
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['image/jpeg'],
+          responses: {
+            ' 200 ': {
+              'description': 'A pictue is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No picture was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a thumbnail by slide id and theme. e.g. by requesting "1" or "1.jpeg" or "1/beige" or "1/beige.jpeg"'
+    }
+  });
+
 };
