@@ -4,6 +4,10 @@ const Joi = require('joi'),
   handlers = require('./controllers/handler'),
   conf = require('./configuration');
 
+const availableThemes = Joi.string().lowercase().trim().replace('.jpeg','').default('default')
+  .valid('default', 'sky', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
+  .description('Theme to apply to the thumbnail');
+
 module.exports = function(server) {
   server.route({
     method: 'GET',
@@ -430,9 +434,7 @@ module.exports = function(server) {
         payload: Joi.string().required().description('HTML of a slide as a string'),
         params: {
           id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
-          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
-            .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
-            .description('Theme to apply to the thumbnail'),
+          theme: availableThemes,
         },
       },
       plugins: {
@@ -473,9 +475,7 @@ module.exports = function(server) {
         options: { convert: true },
         params: {
           id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
-          theme: Joi.string().lowercase().trim().replace('.jpeg','').default('default')
-            .valid('default', 'beige', 'black', 'blood', 'league', 'moon', 'night', 'odimadrid', 'oeg', 'openuniversity', 'simple', 'solarized', 'white')
-            .description('Theme to apply to the thumbnail')
+          theme: availableThemes,
         },
       },
       plugins: {
