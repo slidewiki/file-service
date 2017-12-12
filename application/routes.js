@@ -457,8 +457,9 @@ module.exports = function(server) {
     method: 'GET',
     path: '/thumbnail/slide/{id}/{theme?}',
     handler: {
-      file: (request) => {
-        return request.pre.filePath;
+      file: {
+        path: (request) => request.pre.filePath,
+        confine: conf.fsPath + 'slideThumbnails/',
       },
     },
     config: {
