@@ -190,7 +190,8 @@ module.exports = function(server) {
             .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
             .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
         })
-          .unknown()
+          .unknown(),
+        failAction: handlers.storePicture
       },
       plugins: {
         'hapi-swagger': {
