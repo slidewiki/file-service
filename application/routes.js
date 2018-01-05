@@ -179,7 +179,6 @@ module.exports = function(server) {
             .description('Caption of the picture'),
           altText: Joi.string()
             .description('Alt text of the picture'),
-
         },
         headers: Joi.object({
           '----jwt----': Joi.string()
@@ -190,7 +189,8 @@ module.exports = function(server) {
             .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
             .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
         })
-          .unknown()
+          .unknown(),
+        failAction: handlers.storePicture
       },
       plugins: {
         'hapi-swagger': {
@@ -255,8 +255,8 @@ module.exports = function(server) {
             .required()
             .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
             .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
-        })
-          .unknown()
+        }).unknown(),
+        failAction: handlers.storePicture
       },
       plugins: {
         'hapi-swagger': {
@@ -388,8 +388,8 @@ module.exports = function(server) {
             .required()
             .valid('image/png')
             .description('Mime-Type of the uploaded image')
-        })
-          .unknown()
+        }).unknown(),
+        failAction: handlers.storeProfilepicture
       },
       plugins: {
         'hapi-swagger': {
