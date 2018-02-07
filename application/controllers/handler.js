@@ -217,6 +217,46 @@ let handlers = module.exports = {
           request.log(err);
         });
     }
+  },
+
+  createPRVideo: (request, reply) => {
+    let currentDate = new Date().getTime();
+    let path = '/tmp/' + currentDate + '/';
+    let pictureListName = 'pics.txt';
+    let audioTrackName = 'audioTrack.ogg';
+    let outputName = 'D' + request.query.deckID + 'R' + request.query.deckRevision + '-' + currentDate + '.mp4';
+    child.execSync('mkdir -p ' + path);
+    // 1. save audioTrack to this folder
+    child.execSync('cp /home/rmeissner/Downloads/webm.webm '+ path + audioTrackName);//TODO exchange this to proper stuff
+    let test = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
+    let timings = Object.keys(test).sort(); //NOTE timings in order
+    console.log(timings);
+    let slides = [];
+    for (let i in timings) { //NOTE fill array from object in order of timestamps
+      slides.push(test[timings[i]]);
+    }
+    console.log(slides);
+    let slideList = slides.slice(0, slides.length - 1);
+    reply('Process started');
+    /* eslint-disable promise/catch-or-return,promise/always-return */
+    downloadSlidePictures(slideList, 1920, path).
+      then((pics) => {//pics: [pathToPicture, pathToPicture, pathToPicture]
+        console.log(pics);
+        let toPrint = pics.map((pic, i) => { return ['file \'' + pic + '\'', 'duration ' + (Math.round(timings[i + 1] / 1000) - Math.round(timings[i] / 1000))]; });
+        toPrint = flatten(toPrint);
+        console.log(toPrint);
+        child.execSync('echo "' + toPrint.join('\n') + '" >> ' + path + pictureListName);
+        let exec =  require('util').promisify(child.exec);
+        exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName)
+          .then(() => {
+            child.execSync('mv -f ' + path + outputName + ' /home/rmeissner/Downloads/');
+            console.log('Finished Video');
+            child.execSync('rm -R ' + path);
+          }).catch((e) => {
+            console.log(e);
+          });
+      });
+    /*eslint-enable promise/always-return*/
   }
 };
 
@@ -231,4 +271,100 @@ function applyThemeToSlideHTML(content, theme){
 
   html = juice(html);
   return html;
+}
+
+function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictureList: [slideID, slideID, ..]
+  let promises = pictureList.map((slideID, i) => {
+    return rp.get({
+      uri: Microservices.deck.uri + '/slide/' + slideID,
+      json: true,
+    })
+      .then((res) => {
+        return getPictureFromSlide('' + i, pathToSaveTo, res.revisions[0].content);
+      })
+      .catch((err) => {
+        if (err.statusCode === 404)
+          console.log('notFound');
+        else
+          console.log(err);
+        return '';//TODO return a picture with black content
+      });
+  });
+
+  return Promise.all(promises);//NOTE returns as soon as all promises are resolved
+}
+
+function getPictureFromSlide(fileName, pathToSaveTo, html, theme = 'default') {//eslint-disable-line
+  return new Promise((resolve, reject) => {
+    try {
+      const fileType = '.jpeg';
+      let filePath = path.join(pathToSaveTo, fileName + fileType);
+
+      if (fs.existsSync(filePath))
+        resolve(filePath);
+
+      html = applyThemeToSlideHTML(html, theme);
+
+      let document = cheerio.load(html);
+      let pptxheight = 0, pptxwidth = 0;
+      try {
+        pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
+        pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+      } catch (e) {
+        //There's probably no css in the slide
+      }
+      pptxwidth = pptxwidth ? pptxwidth : 0;
+      pptxheight = pptxheight ? pptxheight : 0;
+      let width = 0;
+      let height = 0;
+      if (pptxwidth !== 0 && pptxheight !== 0) {
+        width = pptxwidth;
+        height = pptxheight;
+      } else {
+        width = 'all';
+        height = 'all';
+      }
+      const options = {
+        shotSize: {
+          width: width,
+          height: height,
+        },
+        shotOffset: {
+          left: 9,
+          right: 64,
+          top: 9,
+          bottom: 48
+        },
+        defaultWhiteBackground: true,
+        streamType: 'jpeg',
+        timeout: 7000, //in ms
+        siteType: 'html',
+        phantomPath: require('phantomjs2').path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
+      };
+
+      webshot(html, filePath, options, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(filePath);
+        }
+      });
+
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+
+function flatten(arr, result = []) {
+  for (let i = 0, length = arr.length; i < length; i++) {
+    const value = arr[i];
+    if (Array.isArray(value)) {
+      flatten(value, result);
+    } else {
+      result.push(value);
+    }
+  }
+  return result;
 }
