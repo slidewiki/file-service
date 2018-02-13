@@ -285,33 +285,29 @@ module.exports = function(server) {
   });
 
   server.route({
-    method: 'GET',
+    method: 'POST',
     path: '/PRvideo',
     handler: handlers.createPRVideo,
     config: {
     //   auth: 'jwt',
-    //   payload: {
-    //     output: 'file',
-    //     uploads: '/tmp/',
-    //     maxBytes: 10485760, //10MB
-    //     failAction: 'log'
-    //   },
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 10485760, //100MB
+        parse: true,
+        allow: 'multipart/form-data',
+        failAction: 'log'
+      },
       validate: {
-        // payload: Joi.required(),
-        // query: {
-        //   title: Joi.string()
-        //     .description('Caption/Title of the picture'),
-        //   altText: Joi.string()
-        //     .description('Alternative text for the picture'),
-        //   license: Joi.string()
-        //     .required().description('Used license as abbreviation (eg. "CC BY-SA 4.0")'),
-        //   copyrightHolder: Joi.string()
-        //     .description('Name of the copyright holder (e.g. "Jhon Doe")'),
-        //   copyrightHolderURL: Joi.string().uri()
-        //     .description('URL to the homepage (or social profile or ...) of the copyright holder (e.g. "https://doe.github.io"'),
-        //   copyrightAdditions: Joi.string()
-        //     .description('Any additional information to the copyright information, that the license might require')
-        // },
+        options: { convert: true },
+        payload: Joi.object({
+          audioFile: Joi.object().required(),
+          slideTimings: Joi.string().trim().min(5).required()
+        }).required(),
+        query: {
+          deckID: Joi.number().integer().positive().description('Id of the Deck').required(),
+          revision: Joi.number().integer().positive().description('Revision of the deck').required(),
+        },
         // headers: Joi.object({
         //   '----jwt----': Joi.string()
         //     .required()
@@ -321,7 +317,7 @@ module.exports = function(server) {
         //     .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
         //     .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
         // }).unknown(),
-        failAction: handlers.createPRVideo
+        failAction: handlers.cleanFailedValidation
       },
       plugins: {
         'hapi-swagger': {

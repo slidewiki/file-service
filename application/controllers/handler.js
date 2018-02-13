@@ -220,20 +220,22 @@ let handlers = module.exports = {
   },
 
   createPRVideo: (request, reply) => {
+    console.log(request.payload);
+    let slideTimes = JSON.parse(request.payload.slideTimings);
+    // let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
+    let mimeType = request.payload.audioFile.filename.toLowerCase().contains('webm') ? 'audio/webm' : 'audio/ogg';
     let currentDate = new Date().getTime();
     let path = '/tmp/' + currentDate + '/';
     let pictureListName = 'pics.txt';
-    let audioTrackName = 'audioTrack.ogg';
+    let audioTrackName = 'audioTrack' + ((mimeType === 'audio/webm') ? '.webm' : '.ogg');
     let outputName = 'D' + request.query.deckID + 'R' + request.query.deckRevision + '-' + currentDate + '.mp4';
     child.execSync('mkdir -p ' + path);
-    // 1. save audioTrack to this folder
-    child.execSync('cp /home/rmeissner/Downloads/webm.webm '+ path + audioTrackName);//TODO exchange this to proper stuff
-    let test = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
-    let timings = Object.keys(test).sort(); //NOTE timings in order
+    child.execSync('cp ' + request.payload.audioFile.path + ' '+ path + audioTrackName);
+    let timings = Object.keys(slideTimes).sort(); //NOTE timings in order
     console.log(timings);
     let slides = [];
     for (let i in timings) { //NOTE fill array from object in order of timestamps
-      slides.push(test[timings[i]]);
+      slides.push(slideTimes[timings[i]]);
     }
     console.log(slides);
     let slideList = slides.slice(0, slides.length - 1);
@@ -257,6 +259,16 @@ let handlers = module.exports = {
           });
       });
     /*eslint-enable promise/always-return*/
+  },
+
+  cleanFailedValidation: function(request, reply, query, err) {
+    switch(request.route.path){
+      case '/PRvideo':
+        child.execSync('rm -f ' + request.payload.audioFile.path);
+        break;
+    }
+    reply(err);
+    // if(a.payload.)
   }
 };
 
