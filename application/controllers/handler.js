@@ -220,55 +220,65 @@ let handlers = module.exports = {
   },
 
   createPRVideo: (request, reply) => {
-    console.log(request.payload);
     let slideTimes = JSON.parse(request.payload.slideTimings);
     // let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
-    let mimeType = request.payload.audioFile.filename.toLowerCase().contains('webm') ? 'audio/webm' : 'audio/ogg';
+    let mimeType = request.payload.audioFile.filename.toLowerCase().includes('webm') ? 'audio/webm' : 'audio/ogg';
     let currentDate = new Date().getTime();
     let path = '/tmp/' + currentDate + '/';
     let pictureListName = 'pics.txt';
     let audioTrackName = 'audioTrack' + ((mimeType === 'audio/webm') ? '.webm' : '.ogg');
-    let outputName = 'D' + request.query.deckID + 'R' + request.query.deckRevision + '-' + currentDate + '.mp4';
-    child.execSync('mkdir -p ' + path);
-    child.execSync('cp ' + request.payload.audioFile.path + ' '+ path + audioTrackName);
+    let outputName = 'D' + request.query.deckID + 'R' + request.query.revision + '-' + currentDate + '.mp4';
+    fs.mkdirSync(path);
+    fs.copyFileSync(request.payload.audioFile.path, path + audioTrackName);
+    fs.unlinkSync(request.payload.audioFile.path);
     let timings = Object.keys(slideTimes).sort(); //NOTE timings in order
-    console.log(timings);
     let slides = [];
     for (let i in timings) { //NOTE fill array from object in order of timestamps
       slides.push(slideTimes[timings[i]]);
     }
-    console.log(slides);
     let slideList = slides.slice(0, slides.length - 1);
+    slideList = slideList.map((uri) => uri.split('slide-')[1]);
+    console.log(slideList);
     reply('Process started');
     /* eslint-disable promise/catch-or-return,promise/always-return */
     downloadSlidePictures(slideList, 1920, path).
       then((pics) => {//pics: [pathToPicture, pathToPicture, pathToPicture]
-        console.log(pics);
-        let toPrint = pics.map((pic, i) => { return ['file \'' + pic + '\'', 'duration ' + (Math.round(timings[i + 1] / 1000) - Math.round(timings[i] / 1000))]; });
+        let toPrint = pics.map((pic, i) => {
+          let duration = (timings[i + 1] / 1000 - timings[i] / 1000);
+          duration = duration < 0 ? 0.1 : duration;
+          return ['file \'' + pic + '\'', 'duration ' + duration];
+        });
         toPrint = flatten(toPrint);
-        console.log(toPrint);
-        child.execSync('echo "' + toPrint.join('\n') + '" >> ' + path + pictureListName);
+        fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
         let exec =  require('util').promisify(child.exec);
-        exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName)
+        return exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName)
           .then(() => {
-            child.execSync('mv -f ' + path + outputName + ' /home/rmeissner/Downloads/');
+            fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
+            fs.unlinkSync(path + outputName);
             console.log('Finished Video');
-            child.execSync('rm -R ' + path);
           }).catch((e) => {
+            console.log('Error running ffmpeg');
             console.log(e);
           });
+      }).catch((err) => console.log(err)).then(() => {
+        // fs.rmdirSync(path);//directory not empty
+        child.execSync('rm -R ' + path);
       });
     /*eslint-enable promise/always-return*/
   },
 
   cleanFailedValidation: function(request, reply, query, err) {
-    switch(request.route.path){
-      case '/PRvideo':
-        child.execSync('rm -f ' + request.payload.audioFile.path);
-        break;
+    try {
+      switch(request.route.path){
+        case '/PRvideo':
+          child.execSync('rm -f ' + request.payload.audioFile.path);
+          break;
+      }
+    } catch (e) {
+      console.log('unable to delete files', request);
+    } finally {
+      reply(err);
     }
-    reply(err);
-    // if(a.payload.)
   }
 };
 
@@ -295,15 +305,22 @@ function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictu
         return getPictureFromSlide('' + i, pathToSaveTo, res.revisions[0].content);
       })
       .catch((err) => {
-        if (err.statusCode === 404)
-          console.log('notFound');
-        else
-          console.log(err);
-        return '';//TODO return a picture with black content
+        switch(err.statusCode){
+          case 404:
+            console.log('Picture not found - ' + slideID);
+            break;
+          case 500:
+            console.log('Server error at requesting slide ' + slideID);
+            break;
+          default:
+            console.log('Another error ', slideID, err);
+        }
+        let appDir = require('path').dirname(require.main.filename);
+        return appDir + '/black_1920x1080.jpg';//TODO if first pic is 16:9, whole video is 16:9
       });
   });
 
-  return Promise.all(promises);//NOTE returns as soon as all promises are resolved
+  return Promise.all(promises);
 }
 
 function getPictureFromSlide(fileName, pathToSaveTo, html, theme = 'default') {//eslint-disable-line
