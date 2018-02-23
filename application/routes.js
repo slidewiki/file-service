@@ -309,15 +309,10 @@ module.exports = function(server) {
           deckID: Joi.number().integer().positive().description('Id of the Deck').required(),
           revision: Joi.number().integer().positive().description('Revision of the deck').required(),
         },
-        // headers: Joi.object({
-        //   '----jwt----': Joi.string()
-        //     .required()
-        //     .description('JWT header provided by the user-service or slidwiki-platform'),
-        //   'content-type': Joi.string()
-        //     .required()
-        //     .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
-        //     .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
-        // }).unknown(),
+        headers: Joi.object({
+          '----jwt----': Joi.string().required()
+            .description('JWT header provided by the user-service or slidwiki-platform'),
+        }).unknown(),
         failAction: handlers.cleanFailedValidation
       },
       plugins: {
@@ -344,6 +339,41 @@ module.exports = function(server) {
       tags: ['api'],
       description: 'Create and store a video of a presentation room recording'
     },
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/video/{filename*}',
+    handler: {
+      directory: {
+        path: conf.fsPath + 'videos/'
+      }
+    },
+    config: {
+      validate: {
+        params: {
+          filename: Joi.string().trim().required()
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['video/mp4'],
+          responses: {
+            ' 200 ': {
+              'description': 'A video is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No video was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a video by name'
+    }
   });
 
   server.route({

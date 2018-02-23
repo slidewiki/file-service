@@ -13,7 +13,13 @@ const boom = require('boom'),
   Microservices = require('../configs/microservices'),
   juice = require('juice'),
   fs = require('fs'),
-  rp = require('request-promise-native');//QUESTION not used?!
+  rp = require('request-promise-native');
+
+  /*
+TODO Refactor code
+TODO move file validation abort removel to last methode (also in routes)
+TODO exchange child.execSync to fs.XYZ
+*/
 
 let handlers = module.exports = {
   storePicture: function(request, reply) {
@@ -200,12 +206,26 @@ let handlers = module.exports = {
         fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
         let exec =  require('util').promisify(child.exec);
         return exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName)
-          .then(() => {
+          .catch((e) => {
+            console.log('Error running ffmpeg');
+            console.log(e);
+            return true;
+          }).then((skip) => {
+            if(skip === true)
+              return;
             fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
             fs.unlinkSync(path + outputName);
-            console.log('Finished Video');
+            console.log('Finished Video, sending mail');
+            return rp.post({
+              uri: Microservices.user.uri + '/user/' + request.auth.credentials.userid + '/sendEmail',//userid
+              body: {
+                reason: 2,//new video
+                data: {fileName: outputName, creationDate: currentDate, deck: request.query.deckID, revision: request.query.revision}
+              },
+              json: true
+            });
           }).catch((e) => {
-            console.log('Error running ffmpeg');
+            console.log('Error sending mail');
             console.log(e);
           });
       }).catch((err) => console.log(err)).then(() => {
