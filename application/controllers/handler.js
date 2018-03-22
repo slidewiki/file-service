@@ -94,7 +94,7 @@ let handlers = module.exports = {
         },
         shotOffset: {
           left: 9,
-          right: 64,
+          right: 9,
           top: 9,
           bottom: 48
         },
@@ -102,6 +102,8 @@ let handlers = module.exports = {
         streamType: 'jpeg',
         timeout: 7000, //in ms
         siteType: 'html',
+        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36',
+        renderDelay: 1000,
         phantomPath: require('phantomjs2')
           .path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
       };
@@ -124,8 +126,10 @@ let handlers = module.exports = {
 
   findOrCreateThumbnail: (request, reply) => {
     let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
+    console.log(filePath);
 
     fs.exists(filePath, (found) => {
+      console.log(found);
       if (found)
         reply(filePath);
       else {//NOTE fetch the slide content to create the thumbnail
@@ -224,11 +228,63 @@ function applyThemeToSlideHTML(content, theme){
   let head = `<head>
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/reveal.css" />
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/theme/${theme}.css" />
+  <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/print/pdf.css">
+  <style>
+    img {
+      max-width: 100%;
+    }
+  </style>
   </head>`;
 
-  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
-  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
+  let defaultCSS = '{' +
+      'position: \'absolute\',' +
+      'top: \'0\',' +
+    '}';
 
+  content = '<section key="1" id="1">' + content + '</section>';
+
+  let body = '<body><script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script><div class="reveal" style=' + defaultCSS + '><div class="slides"><section class="present">' + content + '</section></div></div>';
+  body += '<script src="' + Microservices.platform.uri +'/custom_modules/reveal.js/js/reveal.js"></script>' +
+            '<script>' +
+            '    window.onload = function() {' +
+            '      var all = document.getElementsByTagName("div");' +
+            '      for(i=0; i < all.length; i++) {' +
+            '        if ($(all[i]).html().trim().length < 1) {' +
+            '          all[i].innerHTML="";' +
+            '        }' +
+            '        };' +
+            '    };' +
+            '</script>' +
+            '<script>' +
+            '    var pptxwidth = 0;' +
+            '    var pptxheight = 0;' +
+            '    var elements = document.getElementsByClassName(\'pptx2html\');' +
+            '    for (var i=0; i < elements.length; i++) {' +
+            '     var eltWidth=parseInt(elements[i].style.width.replace(\'px\', \'\'));' +
+            '     var eltHeight=parseInt(elements[i].style.height.replace(\'px\', \'\'));' +
+            '     if (eltWidth > pptxwidth) {' +
+            '       pptxwidth = eltWidth;' +
+            '     }' +
+            '     if (eltHeight > pptxheight) {' +
+            '       pptxheight = eltHeight;' +
+            '     }' +
+            '    }' +
+            '    if (pptxwidth !== 0 && pptxheight !== 0) {' +
+            '     Reveal.initialize({' +
+            '       width: pptxwidth,' +
+            '       height: pptxheight,' +
+            '     });' +
+            '    } else {' +
+          //  '       Reveal.initialize();\n' +
+            '     Reveal.initialize({' +
+            '       width: \'100%\',' +
+            '       height: \'100%\',' +
+            '     });' +
+            '    }' +
+            '</script>' +
+            '</body>';
+  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
+  console.log(html);
   html = juice(html);
   return html;
 }
