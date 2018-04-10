@@ -90,7 +90,7 @@ let handlers = module.exports = {
       /*eslint-disable promise/always-return*/
       screenshot(html, filePath, width, height)
         .then( () => {
-          child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
+          child.execSync('convert ' + filePath + ' -resize 400 -quality 75 ' + filePath);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
           response(toReturn);
         }).catch((err) => {
           request.log(err);
@@ -225,7 +225,7 @@ async function screenshot(html, pathToSaveTo, width, height) {
   await page.setContent(html);
   // await loaded;//NOTE is not working, that's why a timeout is used TODO find better way
   await page.waitFor(500);
-  await page.screenshot({path: pathToSaveTo, type: 'jpeg'});
+  await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
 
   await browser.close();
 }
