@@ -15,6 +15,8 @@ const boom = require('boom'),
   fs = require('fs'),
   rp = require('request-promise-native');//QUESTION not used?!
 
+let browser = null;//NOTE filled on first use
+
 let handlers = module.exports = {
   storePicture: function(request, reply) {
     if(co.isEmpty(request.payload)){
@@ -199,6 +201,14 @@ let handlers = module.exports = {
           request.log(err);
         });
     }
+  },
+
+  shutDownPuppeteer: () => {
+    try {
+      browser.close();
+    } catch (e) {
+      console.log('Puppeteeer did not shut down. Close processes manually');
+    }
   }
 };
 
@@ -208,7 +218,9 @@ function applyThemeToSlideHTML(content, theme){
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/theme/${theme}.css" />
   </head>`;
 
-  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
+  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div>'+
+  '<script type="application/javascript">window.myload = true;</script>'+
+  '</body>';
   let html = '<!DOCTYPE html><html>' + head + body + '</html>';
 
   html = juice(html);
@@ -216,16 +228,14 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
-  let browser = await puppeteer.launch();
-  let page = await browser.newPage();
+  browser = (browser === null) ? await puppeteer.launch() : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+  const page = await browser.newPage();
+
   page.setViewport({width: Number(width), height: Number(height)});
   page.setJavaScriptEnabled(true);
 
-  // let loaded = page.waitForNavigation({waitUntil: 'domcontentloaded'});
-  await page.setContent(html);
-  // await loaded;//NOTE is not working, that's why a timeout is used TODO find better way
-  await page.waitFor(500);
+  await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
   await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
 
-  await browser.close();
+  await page.close();
 }
