@@ -222,7 +222,7 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
-  browser = (browser === null) ? await puppeteer.launch() : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+  browser = (browser === null) ? await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox'], headless: true}) : browser;//NOTE fill var and keep browser open, closes automatically on process exit
   const page = await browser.newPage();
 
   page.setViewport({width: Number(width), height: Number(height)});
