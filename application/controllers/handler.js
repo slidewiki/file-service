@@ -11,7 +11,6 @@ const boom = require('boom'),
   puppeteer = require('puppeteer'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
-  juice = require('juice'),
   fs = require('fs'),
   rp = require('request-promise-native');//QUESTION not used?!
 
@@ -218,12 +217,9 @@ function applyThemeToSlideHTML(content, theme){
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/theme/${theme}.css" />
   </head>`;
 
-  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div>'+
-  '<script type="application/javascript">window.myload = true;</script>'+
-  '</body>';
+  let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
   let html = '<!DOCTYPE html><html>' + head + body + '</html>';
 
-  html = juice(html);
   return html;
 }
 
