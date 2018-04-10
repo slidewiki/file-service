@@ -218,9 +218,7 @@ function applyThemeToSlideHTML(content, theme){
   </head>`;
 
   let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
-  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
-
-  return html;
+  return '<!DOCTYPE html><html>' + head + body + '</html>';
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
