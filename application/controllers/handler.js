@@ -8,12 +8,13 @@ const boom = require('boom'),
   conf = require('../configuration'),
   path = require('path'),
   cheerio = require('cheerio'),
-  webshot = require('webshot'),
+  puppeteer = require('puppeteer'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
-  juice = require('juice'),
   fs = require('fs'),
   rp = require('request-promise-native');//QUESTION not used?!
+
+let browser = null;//NOTE filled on first use
 
 let handlers = module.exports = {
   storePicture: function(request, reply) {
@@ -57,6 +58,7 @@ let handlers = module.exports = {
       const fileType = '.jpeg';
       const theme = (request.params.theme) ? request.params.theme : 'default';
       let filePath = path.join(conf.fsPath, 'slideThumbnails', theme, fileName + fileType);
+      let folder = path.join(conf.fsPath, 'slideThumbnails', theme);
       let html = request.payload;
       let toReturn = { 'filename': fileName + fileType, 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': fileType};
 
@@ -66,55 +68,36 @@ let handlers = module.exports = {
       if (fs.existsSync(filePath))
         return response(toReturn);
 
+      if (!fs.existsSync(folder))
+        fs.mkdirSync(folder);
+
       html = applyThemeToSlideHTML(html, theme);
 
       let document = cheerio.load(html);
-      let pptxheight = 0, pptxwidth = 0;
+      let width = 0, height = 0;
       try {
-        pptxwidth = document('div[class=pptx2html]').css().width.replace('px', '');
-        pptxheight = document('div[class=pptx2html]').css().height.replace('px', '');
+        width = document('div[class=pptx2html]').css().width.replace('px', '');
+        height = document('div[class=pptx2html]').css().height.replace('px', '');
       } catch (e) {
         //There's probably no css in the slide
       }
-      pptxwidth = pptxwidth ? pptxwidth : 0;
-      pptxheight = pptxheight ? pptxheight : 0;
-      let width = 0;
-      let height = 0;
-      if (pptxwidth !== 0 && pptxheight !== 0) {
-        width = pptxwidth;
-        height = pptxheight;
-      } else {
-        width = 'all';
-        height = 'all';
+      width = width ? width : 0;
+      height = height ? height : 0;
+      if (width === 0 || height === 0) {
+        width = '1920';
+        height = '1080';
       }
-      const options = {
-        shotSize: {
-          width: width,
-          height: height,
-        },
-        shotOffset: {
-          left: 9,
-          right: 64,
-          top: 9,
-          bottom: 48
-        },
-        defaultWhiteBackground: true,
-        streamType: 'jpeg',
-        timeout: 7000, //in ms
-        siteType: 'html',
-        phantomPath: require('phantomjs2')
-          .path // using phantomjs2 instead of what comes with webshot (PS: README of webshot for this)
-      };
 
-      webshot(html, filePath, options, (err) => {
-        if (err) {
+      /*eslint-disable promise/always-return*/
+      screenshot(html, filePath, width, height)
+        .then( () => {
+          child.execSync('convert ' + filePath + ' -resize 400 -quality 75 ' + filePath);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
+          response(toReturn);
+        }).catch((err) => {
           request.log(err);
           response(boom.badImplementation(), err.message);
-        } else{
-          child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
-          response(toReturn);
-        }
-      });
+        });
+      /*eslint-enable promise/always-return*/
 
     } catch (err) {
       request.log(err);
@@ -217,6 +200,14 @@ let handlers = module.exports = {
           request.log(err);
         });
     }
+  },
+
+  shutDownPuppeteer: () => {
+    try {
+      browser.close();
+    } catch (e) {
+      console.log('Puppeteeer did not shut down. Close processes manually');
+    }
   }
 };
 
@@ -227,8 +218,18 @@ function applyThemeToSlideHTML(content, theme){
   </head>`;
 
   let body = '<body><div class="reveal"><div class="slides"><section class="present">' + content + '</section></div></div></body>';
-  let html = '<!DOCTYPE html><html>' + head + body + '</html>';
+  return '<!DOCTYPE html><html>' + head + body + '</html>';
+}
 
-  html = juice(html);
-  return html;
+async function screenshot(html, pathToSaveTo, width, height) {
+  browser = (browser === null) ? await puppeteer.launch() : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+  const page = await browser.newPage();
+
+  page.setViewport({width: Number(width), height: Number(height)});
+  page.setJavaScriptEnabled(true);
+
+  await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
+  await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
+
+  await page.close();
 }

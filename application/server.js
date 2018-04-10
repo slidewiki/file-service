@@ -78,3 +78,20 @@ server.register(plugins, (err) => {
     });
   }
 });
+
+function exitHandler(exit = true, cleanup = false) {
+  if(cleanup) {
+    console.log('Stopping puppeteer processes...');
+    require('./controllers/handler').shutDownPuppeteer();
+  }
+  if(exit){
+    console.log('Shutting down...');
+    process.exit();
+  }
+}
+
+process.on('exit', exitHandler.bind(null, false, true));
+process.on('SIGINT', exitHandler);
+process.on('SIGUSR1', exitHandler);
+process.on('SIGUSR2', exitHandler);
+process.on('uncaughtException', exitHandler);
