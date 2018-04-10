@@ -44,6 +44,8 @@
     "mongodb": "^2.2.28",
     "phantomjs2": "^2.2.0",
     "read-chunk": "^2.0.0",
+    "request": "^2.85.0",
+    "request-promise-core": "^1.1.1",
     "request-promise-native": "^1.0.5",
     "rp": "^0.2.0",
     "vision": "^4.1.0",
