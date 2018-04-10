@@ -68,7 +68,7 @@ let handlers = module.exports = {
         return response(toReturn);
 
       if (!fs.existsSync(folder))
-          fs.mkdirSync(folder);
+        fs.mkdirSync(folder);
 
       html = applyThemeToSlideHTML(html, theme);
 
@@ -87,14 +87,16 @@ let handlers = module.exports = {
         height = '1080';
       }
 
+      /*eslint-disable promise/always-return*/
       screenshot(html, filePath, width, height)
-      .then( () => {
-        child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
-        response(toReturn);
-      }).catch((err) => {
-        request.log(err);
-        response(boom.badImplementation(), err.message);
-      });
+        .then( () => {
+          child.execSync('convert ' + filePath + ' -resize 400 ' + filePath);
+          response(toReturn);
+        }).catch((err) => {
+          request.log(err);
+          response(boom.badImplementation(), err.message);
+        });
+      /*eslint-enable promise/always-return*/
 
     } catch (err) {
       request.log(err);
@@ -217,7 +219,7 @@ async function screenshot(html, pathToSaveTo, width, height) {
   let browser = await puppeteer.launch();
   let page = await browser.newPage();
   page.setViewport({width: Number(width), height: Number(height)});
-  page.setJavaScriptEnabled(true)
+  page.setJavaScriptEnabled(true);
 
   // let loaded = page.waitForNavigation({waitUntil: 'domcontentloaded'});
   await page.setContent(html);

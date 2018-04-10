@@ -46,7 +46,7 @@
     "read-chunk": "^2.0.0",
     "request-promise-native": "^1.0.5",
     "rp": "^0.2.0",
-    "vision": "^4.1.0",
+    "vision": "^4.1.0"
   },
   "engines": {
     "node": ">=8.11.0"
