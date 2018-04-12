@@ -12,7 +12,8 @@ const boom = require('boom'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
   fs = require('fs'),
-  rp = require('request-promise-native');
+  rp = require('request-promise-native'),
+  AwaitLock = require('await-lock');
 
   /*
 TODO Refactor code
@@ -20,6 +21,7 @@ TODO move file validation abort removel to last methode (also in routes)
 TODO exchange child.execSync to fs.XYZ
 */
 
+let lock = new AwaitLock();
 let browser = null;//NOTE filled on first use
 
 let handlers = module.exports = {
@@ -59,13 +61,13 @@ let handlers = module.exports = {
 
   storeThumbnail: (request, response) => {
     const fileName = request.params.id;
-    const fileEnding = '.jpeg';
     const theme = (request.params.theme) ? request.params.theme : 'default';
-    let filePath = path.join(conf.fsPath, 'slideThumbnails', theme, fileName + fileEnding);
+    let filePath = getThumbnailFilePath(theme, fileName);
+
     let folder = path.join(conf.fsPath, 'slideThumbnails', theme);
 
     if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
-      filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + fileEnding);
+      filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + '.jpeg');
 
     if (!fs.existsSync(folder))
       fs.mkdirSync(folder);
@@ -83,10 +85,9 @@ let handlers = module.exports = {
   },
 
   findOrCreateThumbnail: (request, reply) => {
-    let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
-    let exists = fs.existsSync(filePath);
+    let filePath = getThumbnailFilePath(request.params.theme, request.params.id);
 
-    if(exists)
+    if(fs.existsSync(filePath))
       reply(filePath);
     else {
       /*eslint-disable promise/always-return*/
@@ -274,7 +275,16 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
-  browser = (browser === null) ? await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox'], headless: true}) : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+  if(browser === null){
+    await lock.acquireAsync();
+    try {
+      if(browser === null)
+        browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
+    } finally {
+      lock.release();
+    }
+  }
+
   const page = await browser.newPage();
 
   page.setViewport({width: Number(width), height: Number(height)});
@@ -287,64 +297,61 @@ async function screenshot(html, pathToSaveTo, width, height) {
 }
 
 function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictureList: [slideID, slideID, ..]
-  let promises = pictureList.map((slideID, i) => {
-    return rp.get({
-      uri: Microservices.deck.uri + '/slide/' + slideID,
-      json: true,
-    })
-      .then((res) => {
-        const filePath = path.join(pathToSaveTo, '' + i + '.jpeg');
-        return getPictureFromSlide(filePath, res.revisions[0].content);
-      })
-      .catch((err) => {
-        switch(err.statusCode){
-          case 404:
-            console.log('Picture not found - ' + slideID);
-            break;
-          case 500:
-            console.log('Server error at requesting slide ' + slideID);
-            break;
-          default:
-            console.log('Another error ', slideID, err);
-        }
-        let appDir = require('path').dirname(require.main.filename);
-        return appDir + '/black_1920x1080.jpg';//TODO if first pic is 16:9, whole video is 16:9
+  let promises = pictureList.map(async (slideID, i) => {
+    try {
+      let res = await rp.get({
+        uri: Microservices.deck.uri + '/slide/' + slideID,
+        json: true,
       });
+      const filePath = path.join(pathToSaveTo, '' + i + '.jpeg');
+      return await getPictureFromSlide(filePath, res.revisions[0].content);
+    } catch(err) {
+      switch(err.statusCode){
+        case 404:
+          console.log('Picture not found - ' + slideID);
+          break;
+        case 500:
+          console.log('Server error at requesting slide ' + slideID);
+          break;
+        default:
+          console.log('Another error ', slideID, err);
+      }
+      let appDir = require('path').dirname(require.main.filename);
+      return appDir + '/black_1920x1080.jpg';//TODO if first pic is 16:9, whole video is 16:9
+    }
   });
 
   return Promise.all(promises);
 }
 
 async function getPictureFromSlide(pathToSaveTo, html, theme = 'default', thumbnail = false) {
+
+  if (fs.existsSync(pathToSaveTo))
+    return pathToSaveTo;
+
+  html = applyThemeToSlideHTML(html, theme);
+
+  let document = cheerio.load(html);
+  let width = 0, height = 0;
   try {
-    if (fs.existsSync(pathToSaveTo))
-      return pathToSaveTo;
-
-    html = applyThemeToSlideHTML(html, theme);
-
-    let document = cheerio.load(html);
-    let width = 0, height = 0;
-    try {
-      width = document('div[class=pptx2html]').css().width.replace('px', '');
-      height = document('div[class=pptx2html]').css().height.replace('px', '');
-    } catch (e) {
-      //There's probably no css in the slide
-    }
-    width = width ? width : 0;
-    height = height ? height : 0;
-    if (width === 0 || height === 0) {
-      width = '1920';
-      height = '1080';
-    }
-
-    return screenshot(html, pathToSaveTo, width, height)
-      .then( () => {
-        if(thumbnail)
-          child.execSync('convert ' + pathToSaveTo + ' -resize 400 -quality 75 ' + pathToSaveTo);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
-        return pathToSaveTo;
-      });
-
-  } catch (err) {
-    throw err;
+    width = document('div[class=pptx2html]').css().width.replace('px', '');
+    height = document('div[class=pptx2html]').css().height.replace('px', '');
+  } catch (e) {
+    //There's probably no css in the slide
   }
+  width = width ? width : 0;
+  height = height ? height : 0;
+  if (width === 0 || height === 0) {
+    width = '1920';
+    height = '1080';
+  }
+
+  await screenshot(html, pathToSaveTo, width, height);
+  if(thumbnail)
+    child.execSync('convert ' + pathToSaveTo + ' -resize 400 -quality 75 ' + pathToSaveTo);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
+  return pathToSaveTo;
+}
+
+function getThumbnailFilePath(theme, fileName) {
+  return path.join(conf.fsPath, 'slideThumbnails', theme, fileName + '.jpeg');//NOTE all thumbnails are generated as JPEG files
 }
