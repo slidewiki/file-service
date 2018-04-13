@@ -12,8 +12,10 @@ const boom = require('boom'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
   fs = require('fs'),
-  rp = require('request-promise-native');//QUESTION not used?!
+  rp = require('request-promise-native'),//QUESTION not used?!
+  AwaitLock = require('await-lock');
 
+let lock = new AwaitLock();
 let browser = null;//NOTE filled on first use
 
 let handlers = module.exports = {
@@ -224,7 +226,15 @@ function applyThemeToSlideHTML(content, theme){
 async function screenshot(html, pathToSaveTo, width, height) {
   try {
     console.log('test1');
-    browser = (browser === null) ? await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true}) : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+    if(browser === null){
+      await lock.acquireAsync();
+      try {
+        if(browser === null)
+          browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
+      } finally {
+        lock.release();
+      }
+    }
     console.log('test2');
     const page = await browser.newPage();
     console.log('test3');

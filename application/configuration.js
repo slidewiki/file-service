@@ -26,7 +26,7 @@ if (!co.isEmpty(process.env.DATABASE_PORT)){
   console.log('Using ' + port + ' as database port.');
 }
 
-let fsPath = './';
+let fsPath = require('path').dirname(__filename);
 if (!co.isEmpty(process.env.APPLICATION_PATH)) {
   fsPath = process.env.APPLICATION_PATH;
 }
