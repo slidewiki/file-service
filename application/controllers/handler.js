@@ -222,14 +222,22 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
-  browser = (browser === null) ? await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox'], headless: true}) : browser;//NOTE fill var and keep browser open, closes automatically on process exit
-  const page = await browser.newPage();
+  try {
+    console.log('test1');
+    browser = (browser === null) ? await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true}) : browser;//NOTE fill var and keep browser open, closes automatically on process exit
+    console.log('test2');
+    const page = await browser.newPage();
+    console.log('test3');
+    page.setViewport({width: Number(width), height: Number(height)});
+    page.setJavaScriptEnabled(true);
 
-  page.setViewport({width: Number(width), height: Number(height)});
-  page.setJavaScriptEnabled(true);
-
-  await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
-  await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
-
-  await page.close();
+    await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
+    console.log('test4');
+    await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
+    console.log('test5');
+    await page.close();
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
 }
