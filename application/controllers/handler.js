@@ -179,9 +179,7 @@ let handlers = module.exports = {
     }
   },
 
-  createPRVideo: (request, reply) => {
-    let slideTimes = JSON.parse(request.payload.slideTimings);
-    // let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
+  createPRVideo: async (request, reply) => {
     let mimeType = request.payload.audioFile.filename.toLowerCase().includes('webm') ? 'audio/webm' : 'audio/ogg';
     let currentDate = new Date().getTime();
     let path = '/tmp/' + currentDate + '/';
@@ -191,54 +189,26 @@ let handlers = module.exports = {
     fs.mkdirSync(path);
     fs.copyFileSync(request.payload.audioFile.path, path + audioTrackName);
     fs.unlinkSync(request.payload.audioFile.path);
+    let slideTimes = JSON.parse(request.payload.slideTimings);// let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
     let timings = Object.keys(slideTimes).sort(); //NOTE timings in order
-    let slides = [];
-    for (let i in timings) { //NOTE fill array from object in order of timestamps
-      slides.push(slideTimes[timings[i]]);
-    }
-    let slideList = slides.slice(0, slides.length - 1);
-    slideList = slideList.map((uri) => uri.split('slide-')[1]);
-    console.log(slideList);
+    let slideList = getSlideList(timings, slideTimes);//TODO exclude paused times
+
     reply('Process started');
-    /* eslint-disable promise/catch-or-return,promise/always-return */
-    downloadSlidePictures(slideList, 1920, path).
-      then((pics) => {//pics: [pathToPicture, pathToPicture, pathToPicture]
-        let toPrint = pics.map((pic, i) => {
-          let duration = (timings[i + 1] / 1000 - timings[i] / 1000);
-          duration = duration < 0 ? 0.1 : duration;
-          return ['file \'' + pic + '\'', 'duration ' + duration];
-        });
-        toPrint = co.flattenArray(toPrint);
-        fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
-        let exec =  require('util').promisify(child.exec);
-        return exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName)
-          .catch((e) => {
-            console.log('Error running ffmpeg');
-            console.log(e);
-            return true;
-          }).then((skip) => {
-            if(skip === true)
-              return;
-            fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
-            fs.unlinkSync(path + outputName);
-            console.log('Finished Video, sending mail');
-            return rp.post({
-              uri: Microservices.user.uri + '/user/' + request.auth.credentials.userid + '/sendEmail',//userid
-              body: {
-                reason: 2,//new video
-                data: {fileName: outputName, creationDate: currentDate, deck: request.query.deckID, revision: request.query.revision}
-              },
-              json: true
-            });
-          }).catch((e) => {
-            console.log('Error sending mail');
-            console.log(e);
-          });
-      }).catch((err) => console.log(err)).then(() => {
-        // fs.rmdirSync(path);//directory not empty
-        child.execSync('rm -R ' + path);
-      });
-    /*eslint-enable promise/always-return*/
+
+    let pics = await downloadSlidePictures(slideList, 1920, path);
+    createFFmpegTimingsFile(pics, timings, path, pictureListName);
+    try {
+      let exec =  require('util').promisify(child.exec);
+      await exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName);
+      fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
+      // fs.unlinkSync(path + outputName);
+      console.log('Finished Video, sending mail');
+      sendVideoMail(request.auth.credentials.userid, request.query.deckID, request.query.revision, currentDate, outputName);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      // child.execSync('rm -R ' + path);
+    }
   },
 
   cleanFailedValidation: function(request, reply, query, err) {
@@ -263,6 +233,42 @@ let handlers = module.exports = {
     }
   }
 };
+
+function getSlideList(timings, slideTimes) {
+  let slides = [];
+  for (let i in timings) { //NOTE fill array from object in order of timestamps
+    slides.push(slideTimes[timings[i]]);
+  }
+  console.log(slides);
+  let slideList = slides.slice(0, slides.length - 1);
+  slideList = slideList.map((uri) => uri.split('slide-')[1]);
+  console.log(slideList);
+  return slideList;
+}
+
+function createFFmpegTimingsFile(pics, timings, path, pictureListName) {
+  let toPrint = pics.map((pic, i) => {
+    let duration = (timings[i + 1] / 1000 - timings[i] / 1000);
+    duration = duration < 0 ? 0.1 : duration;
+    return ['file \'' + pic + '\'', 'duration ' + duration];
+  });
+  toPrint = co.flattenArray(toPrint);
+  fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
+}
+
+function sendVideoMail(userID, deckID, revision, date, fileName) {
+  return rp.post({
+    uri: Microservices.user.uri + '/user/' + userID + '/sendEmail',//userid
+    body: {
+      reason: 2,//new video
+      data: {fileName: fileName, creationDate: date, deck: deckID, revision: revision}
+    },
+    json: true
+  }).catch((e) => {
+    console.log('Error sending mail');
+    console.log(e);
+  });
+}
 
 function applyThemeToSlideHTML(content, theme){
   let head = `<head>

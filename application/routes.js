@@ -290,7 +290,10 @@ module.exports = function(server) {
     handler: handlers.createPRVideo,
     config: {
     //   auth: 'jwt',
-      cors: true,
+      cors: {
+        origin: ['*'],
+        additionalHeaders: ['----jwt----']
+      },
       payload: {
         output: 'file',
         uploads: '/tmp/',
