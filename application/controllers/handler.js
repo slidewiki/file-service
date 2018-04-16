@@ -285,7 +285,7 @@ async function screenshot(html, pathToSaveTo, width, height) {
     await lock.acquireAsync();
     try {
       if(browser === null)
-        browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
+        browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
     } finally {
       lock.release();
     }
@@ -297,6 +297,7 @@ async function screenshot(html, pathToSaveTo, width, height) {
   page.setJavaScriptEnabled(true);
 
   await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
+
   await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
 
   await page.close();
