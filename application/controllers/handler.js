@@ -196,7 +196,7 @@ let handlers = module.exports = {
     reply('Process started');
 
     let pics = await downloadSlidePictures(slideList, 1920, path);
-    createFFmpegTimingsFile(pics, timings, path, pictureListName);
+    createFFmpegTimingsFile(pics, slideTimes, path, pictureListName);
     try {
       let exec =  require('util').promisify(child.exec);
       await exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName);
@@ -237,21 +237,43 @@ let handlers = module.exports = {
 function getSlideList(timings, slideTimes) {
   let slides = [];
   for (let i in timings) { //NOTE fill array from object in order of timestamps
-    slides.push(slideTimes[timings[i]]);
+    if(!(slideTimes[timings[i]] === 'paused' || slideTimes[timings[i]] === 'resumed')){
+      slides.push(slideTimes[timings[i]]);
+    }
   }
-  console.log(slides);
-  let slideList = slides.slice(0, slides.length - 1);
-  slideList = slideList.map((uri) => uri.split('slide-')[1]);
-  console.log(slideList);
-  return slideList;
+  slides = slides.map((uri) => uri.split('slide-')[1]);
+  return slides;
 }
 
-function createFFmpegTimingsFile(pics, timings, path, pictureListName) {
-  let toPrint = pics.map((pic, i) => {
-    let duration = (timings[i + 1] / 1000 - timings[i] / 1000);
-    duration = duration < 0 ? 0.1 : duration;
-    return ['file \'' + pic + '\'', 'duration ' + duration];
-  });
+function createFFmpegTimingsFile(pics, slideTimes, path, pictureListName) {//[1,2,3,p,r,4,5,p]
+  let filteredSlides = [];
+  let filteredTimings = [];
+
+  let timings = Object.keys(slideTimes).sort();
+  let slides = timings.map((time) => slideTimes[time]); //NOTE keeps order of slides
+
+  for (let i = 0; i < slides.length; i++) {
+    if (slides[i] !== 'paused' && slides[i + 1] !== 'paused') { //[1,2,...] & [1,2,p,r,3,4...] & [1,2,p,r,4,5,p,r,6,7...]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides.length - 1 === i + 1) { //[1,2,3,p] & [1,2,p,r,3,4,p]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      break;
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides[i + 2] === 'resumed' && slides[i + 3] !== 'paused') { //[1,2,p,r,4,...] & [1,2,p,r,4,5,p,r,6...]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      filteredTimings.push(timings[i + 3] / 1000 - timings[i + 2] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      i += 2; //NOTE skip some timings
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides[i + 2] === 'resumed' && slides[i + 3] === 'paused') { //[1,2,p,r,p] & [1,2,p,r,4,5,p,r,p]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      break;
+    }
+  }
+
+  let toPrint = filteredSlides.map((pic, i) => ['file \'' + pic + '\'', 'duration ' + filteredTimings[i]]);
   toPrint = co.flattenArray(toPrint);
   fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
 }
