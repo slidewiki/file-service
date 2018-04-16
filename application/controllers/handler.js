@@ -207,7 +207,7 @@ let handlers = module.exports = {
     } catch (err) {
       console.log(err);
     } finally {
-      // child.execSync('rm -R ' + path);
+      child.execSync('rm -R ' + path);
     }
   },
 
