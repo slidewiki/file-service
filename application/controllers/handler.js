@@ -97,13 +97,13 @@ let handlers = module.exports = {
           response(toReturn);
         }).catch((err) => {
           request.log(err);
-          response(boom.badImplementation(), err.message);
+          response(boom.badImplementation());
         });
       /*eslint-enable promise/always-return*/
 
     } catch (err) {
       request.log(err);
-      response(boom.badImplementation(), err);
+      response(boom.badImplementation());
     }
   },
 
@@ -235,17 +235,33 @@ async function screenshot(html, pathToSaveTo, width, height) {
         lock.release();
       }
     }
-    console.log('test2');
-    const page = await browser.newPage();
-    console.log('test3');
-    page.setViewport({width: Number(width), height: Number(height)});
-    page.setJavaScriptEnabled(true);
 
-    await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
-    console.log('test4');
-    await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
-    console.log('test5');
-    await page.close();
+    let workaround = new Promise(async (resolve, reject) => {//NOTE needed for page.on('error', ...), otherwise these errors are not catched properly
+      try {
+        console.log('test2');
+        const page = await browser.newPage();
+        page.on('error', (err) => reject(err));
+        console.log('test3');
+        page.setViewport({width: Number(width), height: Number(height)});
+        page.setJavaScriptEnabled(true);
+
+        await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
+        console.log('test4');
+        await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
+        console.log('test5');
+        await page.close();
+      } catch (e) {
+        reject(e);
+      }
+      resolve();
+    });
+    await workaround.catch(async (err) => {
+      console.log(html);
+      await browser.close();
+      browser = null;
+      throw err;
+    });
+
   } catch (e) {
     console.log(e);
     throw e;
