@@ -430,7 +430,6 @@ module.exports = function(server) {
     handler: handlers.storeThumbnail,
     config: {
       validate: {
-        options: { convert: true },
         payload: Joi.string().required().description('HTML of a slide as a string'),
         params: {
           id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
@@ -475,10 +474,12 @@ module.exports = function(server) {
         }
       ],
       validate: {
-        options: { convert: true },
         params: {
           id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
           theme: availableThemes,
+          query: {
+            force: Joi.boolean().truthy('1').falsy('0', ''),
+          },
         },
       },
       plugins: {
