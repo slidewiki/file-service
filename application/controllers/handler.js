@@ -67,7 +67,7 @@ let handlers = module.exports = {
       if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
         filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + fileType);
 
-      if (fs.existsSync(filePath))
+      if (fs.existsSync(filePath) && !request.query.force)
         return response(toReturn);
 
       if (!fs.existsSync(folder))

@@ -436,6 +436,9 @@ module.exports = function(server) {
           id: Joi.string().lowercase().trim().replace('.jpeg','').required().description('ID of the slide as ID or ID-REVISION'),
           theme: availableThemes,
         },
+        query: {
+          force: Joi.boolean().truthy('1').falsy('0', ''),
+        },
       },
       plugins: {
         'hapi-swagger': {
