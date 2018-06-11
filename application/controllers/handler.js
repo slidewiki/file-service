@@ -111,7 +111,7 @@ let handlers = module.exports = {
     let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
 
     fs.exists(filePath, (found) => {
-      if (found)
+      if (found && !request.query.force)
         reply(filePath);
       else {//NOTE fetch the slide content to create the thumbnail
         rp.get({
