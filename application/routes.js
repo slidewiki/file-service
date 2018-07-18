@@ -86,6 +86,100 @@ module.exports = function(server) {
 
   server.route({
     method: 'GET',
+    path: '/graphic/{filename*}',
+    handler: {
+      directory: {
+        path: conf.fsPath + 'graphics/'
+      }
+    },
+    config: {
+      validate: {
+        params: {
+          filename: Joi.string()
+            .trim()
+            .required()
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['image/svg+xml'],
+          responses: {
+            ' 200 ': {
+              'description': 'A graphic is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No picgraphicture was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a graphic by name'
+    }
+  });
+
+  server.route({
+    method: 'PUT',
+    path: '/graphic/{filename*}',
+    handler: handlers.updateGraphic,
+    config: {
+      auth: 'jwt',
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 10485760, //10MB
+        failAction: 'log'
+      },
+      validate: {
+        payload: Joi.required(),
+        query: {
+          title: Joi.string()
+            .description('Caption/Title of the picture/graphic'),
+          altText: Joi.string()
+            .description('Alternative text for the picture/graphic')
+        },
+        headers: Joi.object({
+          '----jwt----': Joi.string()
+            .required()
+            .description('JWT header provided by the user-service or slidwiki-platform'),
+          'content-type': Joi.string()
+            .required()
+            .valid('image/svg+xml')
+            .description('Mime-Type of the uploaded graphic'), //additinally tested in picture.js on the actual file
+        }).unknown(),
+        failAction: handlers.updateGraphic
+      },
+      plugins: {
+        'hapi-swagger': {
+          consumes: ['image/svg+xml'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully updated the graphic, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to update graphics',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Update a graphic'
+    },
+  });
+
+  server.route({
+    method: 'GET',
     path: '/slideThumbnail/{id*}',
     handler: {
       directory: {
@@ -235,9 +329,9 @@ module.exports = function(server) {
         payload: Joi.required(),
         query: {
           title: Joi.string()
-            .description('Caption/Title of the picture'),
+            .description('Caption/Title of the picture/graphic'),
           altText: Joi.string()
-            .description('Alternative text for the picture'),
+            .description('Alternative text for the picture/graphic'),
           license: Joi.string()
             .required().description('Used license as abbreviation (eg. "CC BY-SA 4.0")'),
           copyrightHolder: Joi.string()
@@ -253,20 +347,20 @@ module.exports = function(server) {
             .description('JWT header provided by the user-service or slidwiki-platform'),
           'content-type': Joi.string()
             .required()
-            .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp')
-            .description('Mime-Type of the uploaded image'), //additinally tested in picture.js on the actual file
+            .valid('image/jpeg', 'image/png', 'image/tiff', 'image/bmp', 'image/svg+xml')
+            .description('Mime-Type of the uploaded picture/graphic'), //additinally tested in picture.js on the actual file
         }).unknown(),
         failAction: handlers.storePicture
       },
       plugins: {
         'hapi-swagger': {
-          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
+          consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp', 'image/svg+xml'],
           responses: {
             ' 200 ': {
-              'description': 'Successfully uploaded and stored a picture, see response',
+              'description': 'Successfully uploaded and stored a picture/graphic, see response',
             },
             ' 401 ': {
-              'description': 'Not authorized to store pictures',
+              'description': 'Not authorized to store pictures/graphics',
               'headers': {
                 'WWW-Authenticate': {
                   'description': 'Use your JWT token.'
@@ -280,7 +374,7 @@ module.exports = function(server) {
         }
       },
       tags: ['api'],
-      description: 'Store a picture'
+      description: 'Store a picture or graphic'
     },
   });
 
