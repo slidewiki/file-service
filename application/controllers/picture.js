@@ -39,7 +39,7 @@ module.exports = {
           if (co.isEmpty(result)){
             return processPicture(request, sum, fileExtension);
           } else
-            return boom.conflict('File already exists and is stored under ' + sum + fileExtension, result);
+            return boom.conflict('File already exists and is stored under ' + ((fileExtension === '.svg') ? '/graphic/' : '') + sum + fileExtension, result);
         });
     } catch (err) {
       request.log(err);
