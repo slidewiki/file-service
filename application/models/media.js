@@ -8,11 +8,6 @@ let ajv = Ajv({
 const media = {
   type: 'object',
   properties: {
-    _id: {
-      type: 'string',
-      maxLength: 24,
-      minLength: 24
-    },
     title: {
       type: 'string'
     },
@@ -21,7 +16,7 @@ const media = {
     },
     type: {
       type: 'string',
-      enum: ['image/jpeg', 'image/png', 'audio/ogg', 'audio/mp3', 'audio/opus', 'video/h264', 'video/h265']
+      enum: ['image/jpeg', 'image/png', 'image/svg+xml', 'audio/ogg', 'audio/mp3', 'audio/opus', 'video/h264', 'video/h265']
     },
     fileName: {
       type: 'string'

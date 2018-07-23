@@ -7,27 +7,64 @@ const boom = require('boom'),
   sizeOf = require('image-size'),
   db = require('../database/mediaDatabase'),
   readChunk = require('read-chunk'),
-  fileType = require('file-type');
+  fileType = require('file-type'),
+  is_svg = require('is-svg'),
+  fs = require('fs');
 
 module.exports = {
   searchPictureAndProcess: function(request) {
     try {
+      let isSVG = false;
       let buffer = readChunk.sync(request.payload.path, 0, 262);
-      if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null))
-        return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
-      let hasAlpha = child.execSync('identify -format "%[channels]" ' + request.payload.path)
-        .toString()
-        .includes('a');
-      let fileExtension = hasAlpha ? '.png' : '.jpg';
+      if(!['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'].includes(!co.isEmpty(fileType(buffer)) ? fileType(buffer).mime : null)){
+        //NOTE check for svg as file-type can't check for svg
+        let fileContent = fs.readFileSync(request.payload.path, {encoding: 'utf8'});
+        isSVG = is_svg(fileContent);
+        if(!isSVG)
+          return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
+      }
+      let fileExtension;
+      if(!isSVG){
+        let hasAlpha = child.execSync('identify -format "%[channels]" ' + request.payload.path)
+          .toString()
+          .includes('a');
+        fileExtension = hasAlpha ? '.png' : '.jpg';
+      } else
+        fileExtension = '.svg';
       let sum = child.execSync('sha256sum ' + request.payload.path)
         .toString()
         .split(' ')[0];
       return db.get(sum + fileExtension)
         .then((result) => {
-          if (co.isEmpty(result))
+          if (co.isEmpty(result)){
             return processPicture(request, sum, fileExtension);
-          else
-            return boom.conflict('File already exists and is stored under ' + sum + fileExtension, result);
+          } else
+            return boom.conflict('File already exists and is stored under ' + ((fileExtension === '.svg') ? '/graphic/' : '') + sum + fileExtension, result);
+        });
+    } catch (err) {
+      request.log(err);
+      return new Promise((resolve, reject) => resolve(boom.badImplementation()));
+    }
+  },
+
+  updateGraphic: function(request) {
+    try {
+      let fileContent = fs.readFileSync(request.payload.path, {encoding: 'utf8'});
+      let isSVG = is_svg(fileContent);
+      if(!isSVG)
+        return new Promise((resolve, reject) => resolve(boom.unsupportedMediaType()));
+      let fileExtension = '.svg';
+      let sum = request.params.filename.split('.')[0];
+      return db.get(sum + fileExtension, true)
+        .then((result) => {
+          if (co.isEmpty(result)){
+            return boom.NotFound();
+          } else {
+            if(request.auth.credentials.userid === result.owner)
+              return processGraphicUpdate(request, sum, fileExtension, result);
+            else
+              return boom.unauthorized();
+          }
         });
     } catch (err) {
       request.log(err);
@@ -50,11 +87,41 @@ module.exports = {
   }
 };
 
+function processGraphicUpdate(request, sum, fileExtension, dbEntry) {
+  try{
+    child.execSync('mv ' + request.payload.path + ' ' + conf.fsPath + '/graphics/' + sum + fileExtension);
+    let targetPath = conf.fsPath + 'graphics/';
+    let title = (request.query.title) ? request.query.title : ((dbEntry.title) ? dbEntry.title : '');
+    let altText = (request.query.altText) ? request.query.altText : ((dbEntry.altText) ? dbEntry.altText : '');
+    let copyrightHolder = (dbEntry.copyrightHolder) ? dbEntry.copyrightHolder.name : undefined;
+    let copyrightHolderURL = (dbEntry.copyrightHolder) ? dbEntry.copyrightHolder.URL : undefined;
+    let file = createMediaObject(targetPath, sum, fileExtension, dbEntry.owner, title, altText, dbEntry.license, copyrightHolder, copyrightHolderURL, dbEntry.copyrightAdditions);
+    file._id = dbEntry._id;
+    return db.update(file)
+      .then((result) => {
+        if (!co.isEmpty(result[0]))
+          return boom.badData('File storage failed because data is wrong: ', co.parseAjvValidationErrors(result));
+        else
+          return file;
+      });
+  } catch (err) {
+    request.log(err);
+    return boom.badImplementation();
+  }
+}
+
 function processPicture(request, sum, fileExtension) {
   try {
-    optimizePictures(request.payload.path, fileExtension, sum);
-    child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
-    let file = createMediaObject(conf.fsPath + 'pictures/', sum, fileExtension, request.auth.credentials.userid, request.query.title, request.query.altText, request.query.license, request.query.copyrightHolder, request.query.copyrightHolderURL, request.query.copyrightAdditions, request.query.copyright);
+    let targetPath = '';
+    if( fileExtension !== '.svg' ){
+      optimizePictures(request.payload.path, fileExtension, sum);
+      child.execSync('mv ' + conf.tmp + '/' + sum + '* ' + conf.fsPath + '/pictures/');
+      targetPath = conf.fsPath + 'pictures/';
+    } else {
+      child.execSync('mv ' + request.payload.path + ' ' + conf.fsPath + '/graphics/' + sum + fileExtension);
+      targetPath = conf.fsPath + 'graphics/';
+    }
+    let file = createMediaObject(targetPath, sum, fileExtension, request.auth.credentials.userid, request.query.title, request.query.altText, request.query.license, request.query.copyrightHolder, request.query.copyrightHolderURL, request.query.copyrightAdditions, request.query.copyright);
     return db.insert(file)
       .then((result) => {
         if (!co.isEmpty(result[0]))
@@ -103,12 +170,12 @@ function createMediaObject(path, sum, fileExtension, owner, newTitle, altText, l
   let result = {
     type: mimeType,
     fileName: sum + fileExtension,
-    thumbnailName: sum + '_thumbnail' + fileExtension,
     owner: owner,
     license: license,
     metadata: metaObject
   };
   //optional values
+  if(mimeType !== 'image/svg+xml') result.thumbnailName = sum + '_thumbnail' + fileExtension;
   if(!co.isEmpty(title)) result.title = title;
   if(!co.isEmpty(altText)) result.altText = altText;
   if(!co.isEmpty(copyrightHolder)) result.copyrightHolder = { name: copyrightHolder};

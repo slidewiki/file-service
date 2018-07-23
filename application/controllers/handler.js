@@ -37,6 +37,24 @@ let handlers = module.exports = {
     }
   },
 
+  updateGraphic: function(request, reply) {
+    if(co.isEmpty(request.payload)){
+      reply(boom.entityTooLarge('Seems like the payload was to large - 10MB max'));
+    } else if (request.payload.bytes <= 1) { //no payload
+      child.execSync('rm -f ' + request.payload.path); //remove tmp file
+      reply(boom.badRequest('A payload is required'));
+    } else {
+      picture.updateGraphic(request)
+        .then((result) => reply(result))
+        .catch((err) => {
+          request.log(err);
+          reply(boom.badImplementation(), err);
+        })
+        .then(() => child.execSync('rm -f ' + request.payload.path))
+        .catch((err) => request.log(err));
+    }
+  },
+
   getMetaData: function(request, reply) {
     db.get(request.params.filename)
       /*eslint-disable promise/always-return*/
