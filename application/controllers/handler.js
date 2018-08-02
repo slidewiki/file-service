@@ -12,7 +12,7 @@ const boom = require('boom'),
   Joi = require('joi'),
   Microservices = require('../configs/microservices'),
   fs = require('fs'),
-  rp = require('request-promise-native'),
+  rp = require('request-promise-native'),//QUESTION not used?!
   AwaitLock = require('await-lock');
 
   /*
@@ -33,6 +33,24 @@ let handlers = module.exports = {
       reply(boom.badRequest('A payload is required'));
     } else {
       picture.searchPictureAndProcess(request)
+        .then((result) => reply(result))
+        .catch((err) => {
+          request.log(err);
+          reply(boom.badImplementation(), err);
+        })
+        .then(() => child.execSync('rm -f ' + request.payload.path))
+        .catch((err) => request.log(err));
+    }
+  },
+
+  updateGraphic: function(request, reply) {
+    if(co.isEmpty(request.payload)){
+      reply(boom.entityTooLarge('Seems like the payload was to large - 10MB max'));
+    } else if (request.payload.bytes <= 1) { //no payload
+      child.execSync('rm -f ' + request.payload.path); //remove tmp file
+      reply(boom.badRequest('A payload is required'));
+    } else {
+      picture.updateGraphic(request)
         .then((result) => reply(result))
         .catch((err) => {
           request.log(err);
@@ -65,9 +83,13 @@ let handlers = module.exports = {
     let filePath = getThumbnailFilePath(theme, fileName);
 
     let folder = path.join(conf.fsPath, 'slideThumbnails', theme);
+    const toReturn = { 'filename': fileName + '.jpeg', 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': '.jpeg'};
 
     if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
       filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + '.jpeg');
+
+    if (fs.existsSync(filePath) && !request.query.force)
+      return response(toReturn);
 
     if (!fs.existsSync(folder))
       fs.mkdirSync(folder);
@@ -75,7 +97,6 @@ let handlers = module.exports = {
     /*eslint-disable promise/always-return*/
     getPictureFromSlide(filePath, request.payload, theme, true)
       .then((/*filePath*/) => {
-        const toReturn = { 'filename': fileName + '.jpeg', 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': '.jpeg'};
         response(toReturn);
       }).catch((err) => {
         request.log(err);
@@ -87,12 +108,12 @@ let handlers = module.exports = {
   findOrCreateThumbnail: (request, reply) => {
     let filePath = getThumbnailFilePath(request.params.theme, request.params.id);
 
-    if(fs.existsSync(filePath))
+    if(fs.existsSync(filePath) && !request.query.force)
       reply(filePath);
     else {
       /*eslint-disable promise/always-return*/
       rp.get({
-        uri: Microservices.deck.uri + '/slide/' + request.params.id,
+        uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
         json: true,
       }).then((result) => {
         request.payload = result.revisions[0].content;
@@ -154,13 +175,12 @@ let handlers = module.exports = {
       child.execSync('rm -f ' + request.payload.path);
       reply(boom.forbidden());
     } else {
-      /*eslint-disable promise/always-return*/
-      picture.saveProfilepicture(request)
-        .then((url) => {
+      return picture.saveProfilepicture(request)
+        .then((url) => {/*eslint-disable promise/always-return*/
           if (typeof url === 'string')
             reply({url: url});
           else
-            reply(url);
+            reply(url);/*eslint-enable promise/always-return*/
         }).catch((err) => {
           try {
             child.execSync('rm -f ' + request.payload.path);
@@ -169,13 +189,12 @@ let handlers = module.exports = {
           } finally {
             request.log(err);
             reply(boom.badImplementation(), err);
-          }
+          }/*eslint-disable promise/always-return*/
         }).then(() => {
-          child.execSync('rm -f ' + request.payload.path);
+          child.execSync('rm -f ' + request.payload.path);/*eslint-enable promise/always-return*/
         }).catch((err) => {
           request.log(err);
         });
-      /*eslint-enable promise/always-return*/
     }
   },
 
@@ -303,26 +322,49 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
-  if(browser === null){
-    await lock.acquireAsync();
-    try {
-      if(browser === null)
-        browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
-    } finally {
-      lock.release();
+
+  try {
+    console.log('test1');
+    if(browser === null){
+      await lock.acquireAsync();
+      try {
+        if(browser === null)
+          browser = await puppeteer.launch({args: ['--no-sandbox','--disable-setuid-sandbox', '--disable-dev-shm-usage'], headless: true});//NOTE fill var and keep browser open, closes automatically on process exit
+      } finally {
+        lock.release();
+      }
     }
+
+    let workaround = new Promise(async (resolve, reject) => {//NOTE needed for page.on('error', ...), otherwise these errors are not catched properly
+      try {
+        console.log('test2');
+        const page = await browser.newPage();
+        page.on('error', (err) => reject(err));
+        console.log('test3');
+        page.setViewport({width: Number(width), height: Number(height)});
+        page.setJavaScriptEnabled(true);
+
+        await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
+        console.log('test4');
+        await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
+        console.log('test5');
+        await page.close();
+      } catch (e) {
+        reject(e);
+      }
+      resolve();
+    });
+    await workaround.catch(async (err) => {
+      console.log(html);
+      await browser.close();
+      browser = null;
+      throw err;
+    });
+
+  } catch (e) {
+    console.log(e);
+    throw e;
   }
-
-  const page = await browser.newPage();
-
-  page.setViewport({width: Number(width), height: Number(height)});
-  page.setJavaScriptEnabled(true);
-
-  await page.goto(`data:text/html;charset=UTF-8,${html}`, { waitUntil: 'load' });//NOTE workaround for https://github.com/GoogleChrome/puppeteer/issues/728
-
-  await page.screenshot({path: pathToSaveTo, type: 'jpeg', quality: 100});//NOTE quality is reduced separately
-
-  await page.close();
 }
 
 function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictureList: [slideID, slideID, ..]

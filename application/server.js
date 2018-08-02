@@ -6,7 +6,7 @@ const hapi = require('hapi'),
   config = require('./configuration'),
   jwt = require('./controllers/jwt');
 
-const server = new hapi.Server({ connections: { routes: { validate: { options: { convert: false } } } } });
+const server = new hapi.Server();
 
 let port = (!co.isEmpty(process.env.APPLICATION_PORT)) ? process.env.APPLICATION_PORT : 3000;
 server.connection({
@@ -71,6 +71,7 @@ server.register(plugins, (err) => {
       server.log('info', 'Server started at ' + server.info.uri);
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/pictures/profile');
+      child.execSync('mkdir -p ' + require('./configuration').fsPath + '/graphics');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/audio');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/videos');
       child.execSync('mkdir -p ' + require('./configuration').fsPath + '/slideThumbnails');

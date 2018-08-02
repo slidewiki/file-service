@@ -34,9 +34,11 @@ node_modules
 
 .coveralls.yml
 application/.nyc_output
+package-lock.json
 
 # created files in dev mode
 application/pictures
 application/audio
 application/videos
 application/slideThumbnails
+application/graphics
