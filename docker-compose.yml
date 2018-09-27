@@ -10,6 +10,7 @@ fileservice:
     - VIRTUAL_HOST=fileservice.experimental.slidewiki.org
     - SERVICE_URL_DECK=https://deckservice.experimental.slidewiki.org
     - SERVICE_URL_PLATFORM=https://platform.experimental.slidewiki.org
+    - SERVICE_URL_USER=https://userservice.experimental.slidewiki.org
     - DATABASE_URL=mongodb # use a url or the name, defined in the docker-compose file
     - LETSENCRYPT_HOST=fileservice.experimental.slidewiki.org
     - LETSENCRYPT_EMAIL=meissner@informatik.uni-leipzig.de

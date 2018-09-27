@@ -205,12 +205,22 @@ let handlers = module.exports = {
     let pictureListName = 'pics.txt';
     let audioTrackName = 'audioTrack' + ((mimeType === 'audio/webm') ? '.webm' : '.ogg');
     let outputName = 'D' + request.query.deckID + 'R' + request.query.revision + '-' + currentDate + '.mp4';
-    fs.mkdirSync(path);
-    fs.copyFileSync(request.payload.audioFile.path, path + audioTrackName);
-    fs.unlinkSync(request.payload.audioFile.path);
-    let slideTimes = JSON.parse(request.payload.slideTimings);// let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
-    let timings = Object.keys(slideTimes).sort(); //NOTE timings in order
-    let slideList = getSlideList(timings, slideTimes);//TODO exclude paused times
+    let slideTimes;
+    let timings;
+    let slideList;
+    try {
+      fs.mkdirSync(path);
+      fs.copyFileSync(request.payload.audioFile.path, path + audioTrackName);
+      fs.unlinkSync(request.payload.audioFile.path);
+      slideTimes = JSON.parse(request.payload.slideTimings);// let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
+      timings = Object.keys(slideTimes).sort(); //NOTE timings in order
+      slideList = getSlideList(timings, slideTimes);//TODO exclude paused times
+    } catch (err) {
+      console.log(err);
+      reply(boom.badImplementation(), err);
+      child.execSync('rm -R ' + path);
+      return;
+    }
 
     reply('Process started');
 
@@ -324,7 +334,6 @@ function applyThemeToSlideHTML(content, theme){
 async function screenshot(html, pathToSaveTo, width, height) {
 
   try {
-    console.log('test1');
     if(browser === null){
       await lock.acquireAsync();
       try {
@@ -337,10 +346,8 @@ async function screenshot(html, pathToSaveTo, width, height) {
 
     let workaround = new Promise(async (resolve, reject) => {//NOTE needed for page.on('error', ...), otherwise these errors are not catched properly
       try {
-        console.log('test2');
         const page = await browser.newPage();
         page.on('error', (err) => reject(err));
-        console.log('test3');
         page.setViewport({width: Number(width), height: Number(height)});
         page.setJavaScriptEnabled(true);
 

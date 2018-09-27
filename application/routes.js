@@ -383,7 +383,7 @@ module.exports = function(server) {
     path: '/PRvideo',
     handler: handlers.createPRVideo,
     config: {
-    //   auth: 'jwt',
+      auth: 'jwt',
       cors: {
         origin: ['*'],
         additionalHeaders: ['----jwt----']
@@ -400,11 +400,11 @@ module.exports = function(server) {
         options: { convert: true },
         payload: Joi.object({
           audioFile: Joi.object().required(),
-          slideTimings: Joi.string().trim().min(5).required()
+          slideTimings: Joi.string().trim().min(5).required()//at least 5 characters, so this isn't an empty string
         }).required(),
         query: {
-          deckID: Joi.number().integer().positive().description('Id of the Deck').required(),
-          revision: Joi.number().integer().positive().description('Revision of the deck').required(),
+          deckID: Joi.number().integer().positive().description('Id of the Deck - used for the filename').required(),
+          revision: Joi.number().integer().positive().description('Revision of the deck - used for the filename').required(),
         },
         headers: Joi.object({
           '----jwt----': Joi.string().required()
