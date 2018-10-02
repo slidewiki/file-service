@@ -232,7 +232,7 @@ let handlers = module.exports = {
       fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
       // fs.unlinkSync(path + outputName);
       console.log('Finished Video, sending mail');
-      sendVideoMail(request.auth.credentials.userid, request.query.deckID, request.query.revision, currentDate, outputName);
+      sendVideoMail(request.auth.credentials.userid, request.auth.token, request.query.deckID, request.query.revision, currentDate, outputName);
     } catch (err) {
       console.log(err);
     } finally {
@@ -307,15 +307,18 @@ function createFFmpegTimingsFile(pics, slideTimes, path, pictureListName) {//[1,
   fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
 }
 
-function sendVideoMail(userID, deckID, revision, date, fileName) {
-  return rp.post({
+function sendVideoMail(userID, jwt, deckID, revision, date, fileName) {
+  let options = {
     uri: Microservices.user.uri + '/user/' + userID + '/sendEmail',//userid
     body: {
       reason: 2,//new video
       data: {fileName: fileName, creationDate: date, deck: deckID, revision: revision}
     },
+    headers: {},
     json: true
-  }).catch((e) => {
+  };
+  options.headers[conf.JWT.HEADER] = jwt;
+  return rp.post(options).catch((e) => {
     console.log('Error sending mail');
     console.log(e);
   });
