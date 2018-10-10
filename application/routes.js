@@ -380,6 +380,101 @@ module.exports = function(server) {
 
   server.route({
     method: 'POST',
+    path: '/PRvideo',
+    handler: handlers.createPRVideo,
+    config: {
+      auth: 'jwt',
+      cors: {
+        origin: ['*'],
+        additionalHeaders: ['----jwt----']
+      },
+      payload: {
+        output: 'file',
+        uploads: '/tmp/',
+        maxBytes: 10485760, //100MB
+        parse: true,
+        allow: 'multipart/form-data',
+        failAction: 'log'
+      },
+      validate: {
+        options: { convert: true },
+        payload: Joi.object({
+          audioFile: Joi.object().required(),
+          slideTimings: Joi.string().trim().min(5).required()//at least 5 characters, so this isn't an empty string
+        }).required(),
+        query: {
+          deckID: Joi.number().integer().positive().description('Id of the Deck - used for the filename').required(),
+          revision: Joi.number().integer().positive().description('Revision of the deck - used for the filename').required(),
+        },
+        headers: Joi.object({
+          '----jwt----': Joi.string().required()
+            .description('JWT header provided by the user-service or slidwiki-platform'),
+        }).unknown(),
+        failAction: handlers.cleanFailedValidation
+      },
+      plugins: {
+        'hapi-swagger': {
+          // consumes: ['image/jpeg', 'image/png', 'image/tiff', 'image/bmp'],
+          responses: {
+            ' 200 ': {
+              'description': 'Successfully uploaded and stored a video, see response',
+            },
+            ' 401 ': {
+              'description': 'Not authorized to store videos',
+              'headers': {
+                'WWW-Authenticate': {
+                  'description': 'Use your JWT token.'
+                }
+              }
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Create and store a video of a presentation room recording'
+    },
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/video/{filename*}',
+    handler: {
+      directory: {
+        path: conf.fsPath + 'videos/'
+      }
+    },
+    config: {
+      validate: {
+        params: {
+          filename: Joi.string().trim().required()
+        },
+      },
+      plugins: {
+        'hapi-swagger': {
+          produces: ['video/mp4'],
+          responses: {
+            ' 200 ': {
+              'description': 'A video is provided'
+            },
+            ' 400 ': {
+              'description': 'Probably a parameter is missing or not allowed'
+            },
+            ' 404 ': {
+              'description': 'No video was found'
+            }
+          }
+        }
+      },
+      tags: ['api'],
+      description: 'Get a video by name'
+    }
+  });
+
+  server.route({
+    method: 'POST',
     path: '/slideThumbnail/{id*}',
     handler: handlers.storeThumbnail,
     config: {

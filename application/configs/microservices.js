@@ -9,4 +9,7 @@ module.exports = {
   'platform':{
     uri: (!co.isEmpty(process.env.SERVICE_URL_PLATFORM)) ? process.env.SERVICE_URL_PLATFORM : 'http://platform'
   },
+  'user':{
+    uri: (!co.isEmpty(process.env.SERVICE_URL_USER)) ? process.env.SERVICE_URL_USER : 'http://user'
+  },
 };

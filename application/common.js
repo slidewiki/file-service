@@ -10,6 +10,18 @@ module.exports = {
       (toTest instanceof Array && toTest.length === 0));
   },
 
+  flattenArray: function(arr, result = []) {
+    for (let i = 0, length = arr.length; i < length; i++) {
+      const value = arr[i];
+      if (Array.isArray(value)) {
+        this.flattenArray(value, result);
+      } else {
+        result.push(value);
+      }
+    }
+    return result;
+  },
+
   rewriteID: function(o){
     if(!this.isEmpty(o)){
       o.id = o._id;

@@ -15,6 +15,12 @@ const boom = require('boom'),
   rp = require('request-promise-native'),//QUESTION not used?!
   AwaitLock = require('await-lock');
 
+  /*
+TODO Refactor code
+TODO move file validation abort removel to last methode (also in routes)
+TODO exchange child.execSync to fs.XYZ
+*/
+
 let lock = new AwaitLock();
 let browser = null;//NOTE filled on first use
 
@@ -56,106 +62,77 @@ let handlers = module.exports = {
   },
 
   getMetaData: function(request, reply) {
+    /*eslint-disable promise/always-return*/
     db.get(request.params.filename)
-      /*eslint-disable promise/always-return*/
       .then((result) => {
         if(co.isEmpty(result))
           reply(boom.notFound());
         else
           reply(result);
-      })/*eslint-enable promise/always-return*/
+      })
       .catch((err) => {
         request.log(err);
         reply(boom.badImplementation(), err);
       });
-
+    /*eslint-enable promise/always-return*/
   },
 
   storeThumbnail: (request, response) => {
-    try {
+    const fileName = request.params.id;
+    const theme = (request.params.theme) ? request.params.theme : 'default';
+    let filePath = getThumbnailFilePath(theme, fileName);
 
-      const fileName = request.params.id;
-      const fileType = '.jpeg';
-      const theme = (request.params.theme) ? request.params.theme : 'default';
-      let filePath = path.join(conf.fsPath, 'slideThumbnails', theme, fileName + fileType);
-      let folder = path.join(conf.fsPath, 'slideThumbnails', theme);
-      let html = request.payload;
-      let toReturn = { 'filename': fileName + fileType, 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': fileType};
+    let folder = path.join(conf.fsPath, 'slideThumbnails', theme);
+    const toReturn = { 'filename': fileName + '.jpeg', 'theme': theme, 'id': fileName, 'mimeType': 'image/jpeg', 'extension': '.jpeg'};
 
-      if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
-        filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + fileType);
+    if(request.path.startsWith('/slideThumbnail'))//NOTE used to be backward compatible
+      filePath = path.join(conf.fsPath, 'slideThumbnails', fileName + '.jpeg');
 
-      if (fs.existsSync(filePath) && !request.query.force)
-        return response(toReturn);
+    if (fs.existsSync(filePath) && !request.query.force)
+      return response(toReturn);
 
-      if (!fs.existsSync(folder))
-        fs.mkdirSync(folder);
+    if (!fs.existsSync(folder))
+      fs.mkdirSync(folder);
 
-      html = applyThemeToSlideHTML(html, theme);
-
-      let document = cheerio.load(html);
-      let width = 0, height = 0;
-      try {
-        width = document('div[class=pptx2html]').css().width.replace('px', '');
-        height = document('div[class=pptx2html]').css().height.replace('px', '');
-      } catch (e) {
-        //There's probably no css in the slide
-      }
-      width = width ? width : 0;
-      height = height ? height : 0;
-      if (width === 0 || height === 0) {
-        width = '1920';
-        height = '1080';
-      }
-
-      /*eslint-disable promise/always-return*/
-      screenshot(html, filePath, width, height)
-        .then( () => {
-          child.execSync('convert ' + filePath + ' -resize 400 -quality 75 ' + filePath);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
-          response(toReturn);
-        }).catch((err) => {
-          request.log(err);
-          response(boom.badImplementation());
-        });
-      /*eslint-enable promise/always-return*/
-
-    } catch (err) {
-      request.log(err);
-      response(boom.badImplementation());
-    }
+    /*eslint-disable promise/always-return*/
+    getPictureFromSlide(filePath, request.payload, theme, true)
+      .then((/*filePath*/) => {
+        response(toReturn);
+      }).catch((err) => {
+        request.log(err);
+        response(boom.badImplementation(), err.message);
+      });
+    /*eslint-enable promise/always-return*/
   },
 
   findOrCreateThumbnail: (request, reply) => {
-    let filePath = path.join(conf.fsPath, 'slideThumbnails', request.params.theme, request.params.id + '.jpeg');//NOTE all thumbnails are generated as JPEG files
+    let filePath = getThumbnailFilePath(request.params.theme, request.params.id);
 
-    fs.exists(filePath, (found) => {
-      if (found && !request.query.force)
-        reply(filePath);
-      else {//NOTE fetch the slide content to create the thumbnail
-        rp.get({
-          uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
-          json: true,
-        /*eslint-disable promise/always-return*/
-        }).then((res) => {
-          request.payload = res.revisions[0].content;
-          handlers.storeThumbnail(request, (response) => {
-            if (response.isBoom)
-              reply(response); //NOTE end the request by returning the error
-            else
-              reply(filePath);
-          });
-        /*eslint-enable promise/always-return*/
-        }).catch((err) => {
-          if (err.statusCode === 404)
-            reply(boom.notFound());
-          else {
-            request.log('error', err);
-            reply(boom.badImplementation());
-          }
+    if(fs.existsSync(filePath) && !request.query.force)
+      reply(filePath);
+    else {
+      /*eslint-disable promise/always-return*/
+      rp.get({
+        uri: `${Microservices.deck.uri}/slide/${request.params.id}`,
+        json: true,
+      }).then((result) => {
+        request.payload = result.revisions[0].content;
+        handlers.storeThumbnail(request, (response) => {
+          if (response.isBoom)
+            reply(response);//NOTE reply with response of storeThumbnail
+          else
+            reply(filePath);
         });
-      }
-    });
-
+      }).catch((err) => {
+        if (err.statusCode === 404)
+          reply(boom.notFound());
+        else {
+          request.log('error', err);
+          reply(boom.badImplementation());
+        }
+      });
+      /*eslint-enable promise/always-return*/
+    }
   },
 
   getMediaOfUser: (request, reply) => {
@@ -173,11 +150,11 @@ let handlers = module.exports = {
                   reply(boom.notFound());
                 else
                   reply(result);
-              })/*eslint-enable promise/no-promise-in-callback, promise/always-return*/
-              .catch((err) => {
+              }).catch((err) => {
                 request.log(err);
                 reply(boom.badImplementation(), err);
               });
+            /*eslint-enable promise/no-promise-in-callback, promise/always-return*/
             break;
           default:
             reply(boom.notFound());
@@ -197,28 +174,83 @@ let handlers = module.exports = {
     } else if (request.params.username !== request.auth.credentials.username) {
       child.execSync('rm -f ' + request.payload.path);
       reply(boom.forbidden());
-    }
-    else {
+    } else {
       return picture.saveProfilepicture(request)
         .then((url) => {/*eslint-disable promise/always-return*/
           if (typeof url === 'string')
             reply({url: url});
           else
-            reply(url);
-        })/*eslint-enable promise/always-return*/
-        .catch((err) => {
+            reply(url);/*eslint-enable promise/always-return*/
+        }).catch((err) => {
           try {
             child.execSync('rm -f ' + request.payload.path);
           } catch (e) {
             console.log(e);
-          }
-          request.log(err);
-          reply(boom.badImplementation(), err);
-        })
-        .then(() => child.execSync('rm -f ' + request.payload.path))
-        .catch((err) => {
+          } finally {
+            request.log(err);
+            reply(boom.badImplementation(), err);
+          }/*eslint-disable promise/always-return*/
+        }).then(() => {
+          child.execSync('rm -f ' + request.payload.path);/*eslint-enable promise/always-return*/
+        }).catch((err) => {
           request.log(err);
         });
+    }
+  },
+
+  createPRVideo: async (request, reply) => {
+    let mimeType = request.payload.audioFile.filename.toLowerCase().includes('webm') ? 'audio/webm' : 'audio/ogg';
+    let currentDate = new Date().getTime();
+    let path = '/tmp/' + currentDate + '/';
+    let pictureListName = 'pics.txt';
+    let audioTrackName = 'audioTrack' + ((mimeType === 'audio/webm') ? '.webm' : '.ogg');
+    let outputName = 'D' + request.query.deckID + 'R' + request.query.revision + '-' + currentDate + '.mp4';
+    let slideTimes;
+    let timings;
+    let slideList;
+    try {
+      fs.mkdirSync(path);
+      fs.copyFileSync(request.payload.audioFile.path, path + audioTrackName);
+      fs.unlinkSync(request.payload.audioFile.path);
+      slideTimes = JSON.parse(request.payload.slideTimings);// let slideTimes = { 1518009573009: '45070-2', 1518009576983: '45071-2', 1518009581167: '45072-3', 1518009587152: '45072-3' };
+      timings = Object.keys(slideTimes).sort(); //NOTE timings in order
+      slideList = getSlideList(timings, slideTimes);//TODO exclude paused times
+    } catch (err) {
+      console.log(err);
+      reply(boom.badImplementation(), err);
+      child.execSync('rm -R ' + path);
+      return;
+    }
+
+    reply('Process started');
+
+    let pics = await downloadSlidePictures(slideList, 1920, path);
+    createFFmpegTimingsFile(pics, slideTimes, path, pictureListName);
+    try {
+      let exec =  require('util').promisify(child.exec);
+      await exec('ffmpeg -f concat -safe 0 -i ' + path + pictureListName + ' -i ' + path + audioTrackName + ' -vsync cfr -c:v libx264 -tune stillimage -c:a aac -b:a 64k ' + path + outputName);
+      fs.copyFileSync(path + outputName, require('../configuration').fsPath + '/videos/' + outputName);
+      // fs.unlinkSync(path + outputName);
+      console.log('Finished Video, sending mail');
+      sendVideoMail(request.auth.credentials.userid, request.auth.token, request.query.deckID, request.query.revision, currentDate, outputName);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      child.execSync('rm -R ' + path);
+    }
+  },
+
+  cleanFailedValidation: function(request, reply, query, err) {
+    try {
+      switch(request.route.path){
+        case '/PRvideo':
+          child.execSync('rm -f ' + request.payload.audioFile.path);
+          break;
+      }
+    } catch (e) {
+      console.log('unable to delete files', request);
+    } finally {
+      reply(err);
     }
   },
 
@@ -231,6 +263,67 @@ let handlers = module.exports = {
   }
 };
 
+function getSlideList(timings, slideTimes) {
+  let slides = [];
+  for (let i in timings) { //NOTE fill array from object in order of timestamps
+    if(!(slideTimes[timings[i]] === 'paused' || slideTimes[timings[i]] === 'resumed')){
+      slides.push(slideTimes[timings[i]]);
+    }
+  }
+  slides = slides.map((uri) => uri.split('slide-')[1]);
+  return slides;
+}
+
+function createFFmpegTimingsFile(pics, slideTimes, path, pictureListName) {//[1,2,3,p,r,4,5,p]
+  let filteredSlides = [];
+  let filteredTimings = [];
+
+  let timings = Object.keys(slideTimes).sort();
+  let slides = timings.map((time) => slideTimes[time]); //NOTE keeps order of slides
+
+  for (let i = 0; i < slides.length; i++) {
+    if (slides[i] !== 'paused' && slides[i + 1] !== 'paused') { //[1,2,...] & [1,2,p,r,3,4...] & [1,2,p,r,4,5,p,r,6,7...]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides.length - 1 === i + 1) { //[1,2,3,p] & [1,2,p,r,3,4,p]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      break;
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides[i + 2] === 'resumed' && slides[i + 3] !== 'paused') { //[1,2,p,r,4,...] & [1,2,p,r,4,5,p,r,6...]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      filteredTimings.push(timings[i + 3] / 1000 - timings[i + 2] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      i += 2; //NOTE skip some timings
+    } else if (slides[i] !== 'paused' && slides[i + 1] === 'paused' && slides[i + 2] === 'resumed' && slides[i + 3] === 'paused') { //[1,2,p,r,p] & [1,2,p,r,4,5,p,r,p]
+      filteredTimings.push(timings[i + 1] / 1000 - timings[i] / 1000);
+      filteredSlides.push(pics[filteredTimings.length - 1]);
+      break;
+    }
+  }
+
+  let toPrint = filteredSlides.map((pic, i) => ['file \'' + pic + '\'', 'duration ' + filteredTimings[i]]);
+  toPrint = co.flattenArray(toPrint);
+  fs.writeFileSync(path + pictureListName, toPrint.join('\n'));
+}
+
+function sendVideoMail(userID, jwt, deckID, revision, date, fileName) {
+  let options = {
+    uri: Microservices.user.uri + '/user/' + userID + '/sendEmail',//userid
+    body: {
+      reason: 2,//new video
+      data: {fileName: fileName, creationDate: date, deck: deckID, revision: revision}
+    },
+    headers: {},
+    json: true
+  };
+  options.headers[conf.JWT.HEADER] = jwt;
+  return rp.post(options).catch((e) => {
+    console.log('Error sending mail');
+    console.log(e);
+  });
+}
+
 function applyThemeToSlideHTML(content, theme){
   let head = `<head>
   <link rel="stylesheet" href="${Microservices.platform.uri}/custom_modules/reveal.js/css/reveal.css" />
@@ -242,8 +335,8 @@ function applyThemeToSlideHTML(content, theme){
 }
 
 async function screenshot(html, pathToSaveTo, width, height) {
+
   try {
-    console.log('test1');
     if(browser === null){
       await lock.acquireAsync();
       try {
@@ -256,10 +349,8 @@ async function screenshot(html, pathToSaveTo, width, height) {
 
     let workaround = new Promise(async (resolve, reject) => {//NOTE needed for page.on('error', ...), otherwise these errors are not catched properly
       try {
-        console.log('test2');
         const page = await browser.newPage();
         page.on('error', (err) => reject(err));
-        console.log('test3');
         page.setViewport({width: Number(width), height: Number(height)});
         page.setJavaScriptEnabled(true);
 
@@ -284,4 +375,64 @@ async function screenshot(html, pathToSaveTo, width, height) {
     console.log(e);
     throw e;
   }
+}
+
+function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictureList: [slideID, slideID, ..]
+  let promises = pictureList.map(async (slideID, i) => {
+    try {
+      let res = await rp.get({
+        uri: Microservices.deck.uri + '/slide/' + slideID,
+        json: true,
+      });
+      const filePath = path.join(pathToSaveTo, '' + i + '.jpeg');
+      return await getPictureFromSlide(filePath, res.revisions[0].content);
+    } catch(err) {
+      switch(err.statusCode){
+        case 404:
+          console.log('Picture not found - ' + slideID);
+          break;
+        case 500:
+          console.log('Server error at requesting slide ' + slideID);
+          break;
+        default:
+          console.log('Another error ', slideID, err);
+      }
+      let appDir = require('path').dirname(require.main.filename);
+      return appDir + '/black_1920x1080.jpg';//TODO if first pic is 16:9, whole video is 16:9
+    }
+  });
+
+  return Promise.all(promises);
+}
+
+async function getPictureFromSlide(pathToSaveTo, html, theme = 'default', thumbnail = false) {
+
+  if (fs.existsSync(pathToSaveTo))
+    return pathToSaveTo;
+
+  html = applyThemeToSlideHTML(html, theme);
+
+  let document = cheerio.load(html);
+  let width = 0, height = 0;
+  try {
+    width = document('div[class=pptx2html]').css().width.replace('px', '');
+    height = document('div[class=pptx2html]').css().height.replace('px', '');
+  } catch (e) {
+    //There's probably no css in the slide
+  }
+  width = width ? width : 0;
+  height = height ? height : 0;
+  if (width === 0 || height === 0) {
+    width = '1920';
+    height = '1080';
+  }
+
+  await screenshot(html, pathToSaveTo, width, height);
+  if(thumbnail)
+    child.execSync('convert ' + pathToSaveTo + ' -resize 400 -quality 75 ' + pathToSaveTo);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
+  return pathToSaveTo;
+}
+
+function getThumbnailFilePath(theme, fileName) {
+  return path.join(conf.fsPath, 'slideThumbnails', theme, fileName + '.jpeg');//NOTE all thumbnails are generated as JPEG files
 }
