@@ -429,7 +429,7 @@ async function getPictureFromSlide(pathToSaveTo, html, theme = 'default', thumbn
 
   await screenshot(html, pathToSaveTo, width, height);
   if(thumbnail)
-    child.execSync('convert ' + pathToSaveTo + ' -resize 400 -quality 75 ' + pathToSaveTo);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
+    child.execSync('convert ' + pathToSaveTo + ' -crop +8+8 -resize 400 -quality 75 ' + pathToSaveTo);//NOTE using lower quality to reduce file size, q75 has only minor visual impact
   return pathToSaveTo;
 }
 
