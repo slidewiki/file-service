@@ -95,7 +95,7 @@ let handlers = module.exports = {
       fs.mkdirSync(folder);
 
     /*eslint-disable promise/always-return*/
-    getPictureFromSlide(filePath, request.payload, theme, true)
+    getPictureFromSlide(filePath, request.payload, theme, true, request.query.force)
       .then((/*filePath*/) => {
         response(toReturn);
       }).catch((err) => {
@@ -405,9 +405,9 @@ function downloadSlidePictures(pictureList, PictureWidth, pathToSaveTo) {//pictu
   return Promise.all(promises);
 }
 
-async function getPictureFromSlide(pathToSaveTo, html, theme = 'default', thumbnail = false) {
+async function getPictureFromSlide(pathToSaveTo, html, theme = 'default', thumbnail = false, force = false) {
 
-  if (fs.existsSync(pathToSaveTo))
+  if (fs.existsSync(pathToSaveTo) && !force)
     return pathToSaveTo;
 
   html = applyThemeToSlideHTML(html, theme);
